@@ -6,9 +6,7 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 export default defineConfig({
   plugins: [
     react(),
-    // Keep runtimeErrorOverlay for development
     ...(process.env.NODE_ENV !== "production" ? [runtimeErrorOverlay()] : []),
-    // Keep Replit cartographer plugin for non-production Replit environments
     ...(process.env.NODE_ENV !== "production" && process.env.REPL_ID
       ? [
           import("@replit/vite-plugin-cartographer").then((m) =>
@@ -26,15 +24,15 @@ export default defineConfig({
   },
   root: path.resolve(__dirname, "./client"),
   build: {
-    outDir: path.resolve(__dirname, "./dist"), // Align with example's 'dist' for Vercel
-    emptyOutDir: true, // Keep your setting to clear output directory
-    sourcemap: false, // From example, optimizes production build
+    outDir: path.resolve(__dirname, "./dist"),
+    emptyOutDir: true,
+    sourcemap: false,
   },
   server: {
-    port: 3000, // From example, for consistency
+    port: 3000,
     fs: {
       strict: true,
-      deny: ["**/.*"], // Keep your strict file serving settings
+      deny: ["**/.*"],
     },
   },
 });
