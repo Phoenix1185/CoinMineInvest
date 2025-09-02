@@ -9,6 +9,8 @@ import AuthPage from "@/pages/auth-page";
 import Home from "@/pages/home";
 import Admin from "@/pages/admin";
 import EarningsPage from "@/components/EarningsPage";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsOfService from "@/pages/terms-of-service";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 function Router() {
@@ -24,6 +26,10 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - accessible to everyone */}
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/terms-of-service" component={TermsOfService} />
+      
       {!isAuthenticated ? (
         <>
           <Route path="/" component={AuthPage} />
