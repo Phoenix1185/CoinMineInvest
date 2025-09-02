@@ -223,17 +223,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const transactions = await storage.getPendingTransactions();
       
-      // Enhance transactions with user details
-      const enhancedTransactions = await Promise.all(
-        transactions.map(async (tx) => {
-          const user = await storage.getUser(tx.userId);
-          return {
-            ...tx,
-            userEmail: user?.email || 'Unknown',
-            userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown'
-          };
-        })
+      // Get all unique user IDs to fetch in batch
+      const userIds = Array.from(new Set(transactions.map(tx => tx.userId)));
+      
+      // Fetch all users in a single operation for better performance
+      const users = await Promise.all(
+        userIds.map(id => storage.getUser(id))
       );
+      
+      // Create a user map for quick lookup
+      const userMap = new Map();
+      users.forEach((user, index) => {
+        if (user) {
+          userMap.set(userIds[index], user);
+        }
+      });
+      
+      // Enhance transactions with user details
+      const enhancedTransactions = transactions.map(tx => {
+        const user = userMap.get(tx.userId);
+        return {
+          ...tx,
+          userEmail: user?.email || 'Unknown',
+          userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown'
+        };
+      });
       
       res.json(enhancedTransactions);
     } catch (error) {
@@ -355,6 +369,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing withdrawal:", error);
       res.status(500).json({ message: "Failed to process withdrawal" });
+    }
+  });
+
+  app.post('/api/admin/withdrawals/:id/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      const withdrawal = await storage.updateWithdrawal(id, {
+        status: 'rejected',
+        rejectionReason: reason,
+        processedAt: new Date(),
+      });
+
+      res.json(withdrawal);
+    } catch (error) {
+      console.error("Error rejecting withdrawal:", error);
+      res.status(500).json({ message: "Failed to reject withdrawal" });
     }
   });
 
@@ -755,11 +791,36 @@ async function fetchCryptoPrices() {
   }
 }
 
+// Cache BTC price for performance optimization
+let cachedBtcPrice = 111325; // Fallback price
+let lastBtcPriceUpdate = 0;
+const BTC_PRICE_CACHE_DURATION = 60000; // Cache for 1 minute
+
+async function getCachedBtcPrice(): Promise<number> {
+  const now = Date.now();
+  
+  // Return cached price if still valid
+  if (now - lastBtcPriceUpdate < BTC_PRICE_CACHE_DURATION) {
+    return cachedBtcPrice;
+  }
+  
+  try {
+    const btcPrice = await storage.getCryptoPrice('BTC');
+    if (btcPrice?.price) {
+      cachedBtcPrice = Number(btcPrice.price);
+      lastBtcPriceUpdate = now;
+    }
+  } catch (error) {
+    console.error("Error fetching BTC price, using cached value:", error);
+  }
+  
+  return cachedBtcPrice;
+}
+
 // Generate per-second earnings for active contracts  
 async function generateDailyEarnings(userId: string, plan: any, contractId: number) {
   try {
-    const btcPrice = await storage.getCryptoPrice('BTC');
-    const btcPriceUsd = Number(btcPrice?.price) || 111325;
+    const btcPriceUsd = await getCachedBtcPrice();
     
     // Convert daily earnings to per-second earnings (daily / 86,400 seconds in a day)
     const dailyEarningsAmount = Number(plan.dailyEarnings);

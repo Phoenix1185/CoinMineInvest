@@ -46,6 +46,7 @@ interface Withdrawal {
   id: number;
   userId: number;
   amount: string;
+  currency: string;
   walletAddress: string;
   status: string;
   createdAt: string;
@@ -70,6 +71,8 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [rejectReason, setRejectReason] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<number | null>(null);
+  const [withdrawalRejectReason, setWithdrawalRejectReason] = useState("");
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   
   // Announcement management state
@@ -202,6 +205,50 @@ export default function Admin() {
     },
   });
 
+  const processWithdrawalMutation = useMutation({
+    mutationFn: async ({ withdrawalId, transactionHash, networkFee }: { withdrawalId: number; transactionHash: string; networkFee: string }) => {
+      await apiRequest("POST", `/api/admin/withdrawals/${withdrawalId}/process`, { transactionHash, networkFee });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({
+        title: "Success",
+        description: "Withdrawal processed successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to process withdrawal",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectWithdrawalMutation = useMutation({
+    mutationFn: async ({ withdrawalId, reason }: { withdrawalId: number; reason: string }) => {
+      await apiRequest("POST", `/api/admin/withdrawals/${withdrawalId}/reject`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({
+        title: "Success",
+        description: "Withdrawal rejected successfully",
+      });
+      setWithdrawalRejectReason("");
+      setSelectedWithdrawal(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to reject withdrawal",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleApprove = (transactionId: number) => {
     approveMutation.mutate(transactionId);
   };
@@ -211,6 +258,27 @@ export default function Admin() {
       rejectMutation.mutate({ 
         transactionId: selectedTransaction, 
         reason: rejectReason.trim() 
+      });
+    }
+  };
+
+  const handleProcessWithdrawal = (withdrawalId: number) => {
+    // For demo purposes, auto-generate transaction hash and network fee
+    const mockTransactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+    const mockNetworkFee = "0.0001";
+    
+    processWithdrawalMutation.mutate({
+      withdrawalId,
+      transactionHash: mockTransactionHash,
+      networkFee: mockNetworkFee
+    });
+  };
+
+  const handleRejectWithdrawal = () => {
+    if (selectedWithdrawal && withdrawalRejectReason.trim()) {
+      rejectWithdrawalMutation.mutate({ 
+        withdrawalId: selectedWithdrawal, 
+        reason: withdrawalRejectReason.trim() 
       });
     }
   };
@@ -491,9 +559,128 @@ export default function Admin() {
                 <CardTitle className="text-xl font-bold text-white">Pending Withdrawals</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <div className="text-cmc-gray">Withdrawal management coming soon...</div>
-                </div>
+                {withdrawalsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-cmc-gray">Loading withdrawals...</div>
+                  </div>
+                ) : withdrawals.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-cmc-gray" data-testid="text-no-withdrawals">No pending withdrawals</div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-700">
+                          <TableHead className="text-cmc-gray">Withdrawal ID</TableHead>
+                          <TableHead className="text-cmc-gray">User</TableHead>
+                          <TableHead className="text-cmc-gray">Amount</TableHead>
+                          <TableHead className="text-cmc-gray">Currency</TableHead>
+                          <TableHead className="text-cmc-gray">Wallet Address</TableHead>
+                          <TableHead className="text-cmc-gray">Date</TableHead>
+                          <TableHead className="text-cmc-gray">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {withdrawals.map((withdrawal: Withdrawal) => (
+                          <TableRow key={withdrawal.id} className="border-gray-700" data-testid={`row-withdrawal-${withdrawal.id}`}>
+                            <TableCell className="font-mono text-sm">
+                              {withdrawal.id.toString().slice(0, 8) + '...'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-white font-medium">{withdrawal.userName || 'Unknown'}</span>
+                                <span className="text-xs text-cmc-gray">{withdrawal.userEmail || 'Unknown'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-semibold text-orange-500">
+                              {withdrawal.amount}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="border-orange-500 text-orange-500">
+                                {withdrawal.currency || 'BTC'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm max-w-32 truncate">
+                              {withdrawal.walletAddress}
+                            </TableCell>
+                            <TableCell className="text-sm text-cmc-gray">
+                              {new Date(withdrawal.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleProcessWithdrawal(withdrawal.id)}
+                                  disabled={processWithdrawalMutation.isPending}
+                                  className="bg-cmc-green hover:bg-green-600"
+                                  data-testid={`button-process-${withdrawal.id}`}
+                                >
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Process
+                                </Button>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => setSelectedWithdrawal(withdrawal.id)}
+                                      disabled={rejectWithdrawalMutation.isPending}
+                                      data-testid={`button-reject-withdrawal-${withdrawal.id}`}
+                                    >
+                                      <X className="w-4 h-4 mr-1" />
+                                      Reject
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="bg-cmc-card border-gray-700">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-white">Reject Withdrawal</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label htmlFor="withdrawalReason" className="text-cmc-gray">
+                                          Rejection Reason
+                                        </Label>
+                                        <Textarea
+                                          id="withdrawalReason"
+                                          value={withdrawalRejectReason}
+                                          onChange={(e) => setWithdrawalRejectReason(e.target.value)}
+                                          className="bg-cmc-dark border-gray-600 text-white mt-2"
+                                          placeholder="Please provide a reason for rejection..."
+                                          data-testid="textarea-withdrawal-reject-reason"
+                                        />
+                                      </div>
+                                      <div className="flex justify-end space-x-2">
+                                        <Button
+                                          variant="outline"
+                                          onClick={() => {
+                                            setWithdrawalRejectReason("");
+                                            setSelectedWithdrawal(null);
+                                          }}
+                                          data-testid="button-cancel-reject-withdrawal"
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button
+                                          variant="destructive"
+                                          onClick={handleRejectWithdrawal}
+                                          disabled={!withdrawalRejectReason.trim() || rejectWithdrawalMutation.isPending}
+                                          data-testid="button-confirm-reject-withdrawal"
+                                        >
+                                          Reject Withdrawal
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

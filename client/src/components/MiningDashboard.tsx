@@ -72,7 +72,8 @@ interface EarningsData {
 export default function MiningDashboard() {
   const { data: earningsData, isLoading: earningsLoading } = useQuery<EarningsData>({
     queryKey: ["/api/earnings"],
-    refetchInterval: 1000, // Refresh every second for real-time updates
+    refetchInterval: 2000, // Optimized: Refresh every 2 seconds instead of 1 for better performance
+    staleTime: 1000, // Consider data fresh for 1 second to prevent unnecessary refetches
   });
 
   const { data: contracts = [], isLoading: contractsLoading } = useQuery<MiningContract[]>({
@@ -92,7 +93,7 @@ export default function MiningDashboard() {
   });
 
   // Fetch real-time crypto prices for live USD conversion
-  const { data: cryptoPrices = [] } = useQuery({
+  const { data: cryptoPrices = [] } = useQuery<any[]>({
     queryKey: ["/api/crypto-prices"],
     refetchInterval: 60000, // Refresh every minute to match server updates
   });

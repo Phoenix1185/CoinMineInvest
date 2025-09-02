@@ -93,6 +93,7 @@ export const withdrawals = pgTable('withdrawals', {
   status: withdrawalStatusEnum('status').default('pending').notNull(),
   transactionHash: varchar('transaction_hash', { length: 255 }),
   networkFee: decimal('network_fee', { precision: 20, scale: 8 }).default('0'),
+  rejectionReason: text('rejection_reason'),
   processedAt: timestamp('processed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
