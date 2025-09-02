@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="flex items-center space-x-2 text-cmc-gray">
-            <span>© 2024 CryptoMine Pro. All rights reserved.</span>
+            <span>© 2025 CryptoMine Pro. All rights reserved.</span>
           </div>
           
           <div className="flex items-center space-x-1 text-cmc-gray text-sm">
