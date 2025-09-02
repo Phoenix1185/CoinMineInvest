@@ -430,6 +430,13 @@ export default function AuthPage() {
                   </div>
                 </div>
               </div>
+              
+              {/* Footer Links */}
+              <div className="flex justify-center space-x-6 pt-4 border-t border-gray-600/50 text-sm">
+                <a href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors" data-testid="link-privacy-policy">Privacy Policy</a>
+                <a href="/terms-of-service" className="text-gray-400 hover:text-white transition-colors" data-testid="link-terms-of-service">Terms of Service</a>
+                <a href="/support" className="text-gray-400 hover:text-white transition-colors" data-testid="link-support">Support</a>
+              </div>
             </CardContent>
           </Card>
         </div>

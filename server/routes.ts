@@ -167,8 +167,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totals = await storage.getUserTotalEarnings(userId);
       const totalBtc = totals.totalBtc;
       const requestedAmount = withdrawalData.amount;
+      const requestedCurrency = withdrawalData.currency;
 
-      if (requestedAmount > totalBtc) {
+      // Calculate BTC equivalent for the requested withdrawal
+      let btcEquivalent = requestedAmount;
+      if (requestedCurrency !== "BTC") {
+        // Get crypto prices for conversion
+        const cryptoPrices = await storage.getCryptoPrices();
+        const btcPrice = cryptoPrices.find((p: any) => p.symbol === "BTC")?.price || 0;
+        const currencyPrice = cryptoPrices.find((p: any) => p.symbol === requestedCurrency)?.price || 0;
+        
+        if (!btcPrice || !currencyPrice) {
+          return res.status(400).json({ message: "Unable to get current exchange rates" });
+        }
+        
+        // Convert: requested amount * currency price = USD value
+        // USD value / BTC price = BTC equivalent
+        const usdAmount = requestedAmount * parseFloat(currencyPrice.toString());
+        btcEquivalent = usdAmount / parseFloat(btcPrice.toString());
+      }
+
+      if (btcEquivalent > totalBtc) {
         return res.status(400).json({ message: "Insufficient balance" });
       }
 
