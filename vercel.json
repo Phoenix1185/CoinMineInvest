@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://running-kimberli-suhailtechlnf-4b28b6a4.koyeb.app/api/$1"
+      "destination": "running-kimberli-suhailtechlnf-4b28b6a4.koyeb.app/api/$1"
     },
     {
       "source": "/(.*)",
