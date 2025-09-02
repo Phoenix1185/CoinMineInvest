@@ -48,8 +48,26 @@ export default function WithdrawalPage() {
     queryKey: ["/api/withdrawals"],
   });
 
+  const { data: cryptoPrices = [] } = useQuery({
+    queryKey: ["/api/crypto-prices"],
+  });
+
   const totals = (earningsData as any)?.totals || { totalBtc: "0", totalUsd: "0" };
   const availableBalance = parseFloat(totals.totalBtc);
+
+  // Helper function to calculate BTC equivalent for any currency
+  const calculateBtcEquivalent = (amount: number, currency: string): number => {
+    if (currency === "BTC") return amount;
+    
+    const prices = cryptoPrices as any[] || [];
+    const btcPrice = prices.find((p: any) => p.symbol === "BTC")?.price || 0;
+    const currencyPrice = prices.find((p: any) => p.symbol === currency)?.price || 0;
+    
+    if (!btcPrice || !currencyPrice) return 0;
+    
+    const usdAmount = amount * parseFloat(currencyPrice);
+    return usdAmount / parseFloat(btcPrice);
+  };
 
   const createWithdrawalMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -120,11 +138,12 @@ export default function WithdrawalPage() {
       return;
     }
 
-    // For now, only BTC withdrawals from mining earnings
-    if (currency === "BTC" && amountNum > availableBalance) {
+    // Check balance for all currencies by converting to BTC equivalent
+    const btcEquivalent = calculateBtcEquivalent(amountNum, currency);
+    if (btcEquivalent > availableBalance) {
       toast({
         title: "Error",
-        description: "Insufficient balance",
+        description: `Insufficient balance. Required: ${btcEquivalent.toFixed(8)} BTC equivalent, Available: ${availableBalance.toFixed(8)} BTC`,
         variant: "destructive",
       });
       return;
@@ -195,11 +214,14 @@ export default function WithdrawalPage() {
                     {currency || "BTC"}
                   </div>
                 </div>
-                {currency === "BTC" && (
-                  <div className="text-xs text-cmc-gray mt-1">
-                    Available: {availableBalance.toFixed(8)} BTC
-                  </div>
-                )}
+                <div className="text-xs text-cmc-gray mt-1">
+                  Available: {availableBalance.toFixed(8)} BTC
+                  {currency && currency !== "BTC" && amount && (
+                    <div className="text-cmc-blue">
+                      {amount} {currency} = ~{calculateBtcEquivalent(parseFloat(amount) || 0, currency).toFixed(8)} BTC
+                    </div>
+                  )}
+                </div>
               </div>
 
               <Button
@@ -295,7 +317,12 @@ export default function WithdrawalPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono text-white" data-testid={`text-withdrawal-amount-${withdrawal.id}`}>
-                        {withdrawal.amount}
+                        <div>{withdrawal.amount} {withdrawal.currency}</div>
+                        {withdrawal.currency !== "BTC" && (
+                          <div className="text-xs text-cmc-blue">
+                            (~{calculateBtcEquivalent(parseFloat(withdrawal.amount), withdrawal.currency).toFixed(8)} BTC)
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="font-mono text-sm text-cmc-gray" data-testid={`text-withdrawal-address-${withdrawal.id}`}>
                         {withdrawal.walletAddress.slice(0, 10)}...
