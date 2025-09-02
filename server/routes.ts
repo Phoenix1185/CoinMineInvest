@@ -640,7 +640,7 @@ async function initializeMiningPlans() {
           name: "Starter Plan",
           price: "10",
           miningRate: "1.0", // MH/s
-          dailyEarnings: "0.00000500", // BTC
+          dailyEarnings: "0.00000045", // BTC - Corrected for 15% monthly ROI ($0.05/day)
           monthlyRoi: "15.0", // percentage
           contractPeriod: 1, // months (changed to 1 month)
           description: "Perfect for beginners wanting to start their mining journey",
@@ -657,7 +657,7 @@ async function initializeMiningPlans() {
           name: "Pro Plan",
           price: "50",
           miningRate: "5.0",
-          dailyEarnings: "0.00002800",
+          dailyEarnings: "0.00000271", // BTC - Corrected for 18% monthly ROI ($0.30/day)
           monthlyRoi: "18.0",
           contractPeriod: 1,
           description: "For serious miners looking for better returns",
@@ -674,7 +674,7 @@ async function initializeMiningPlans() {
           name: "Enterprise Plan",
           price: "200",
           miningRate: "20.0",
-          dailyEarnings: "0.00012500",
+          dailyEarnings: "0.00001329", // BTC - Corrected for 22% monthly ROI ($1.47/day)
           monthlyRoi: "22.0",
           contractPeriod: 1,
           description: "Maximum mining power for professional investors",
