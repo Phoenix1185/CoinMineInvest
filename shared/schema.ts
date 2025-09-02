@@ -17,8 +17,12 @@ export const users = pgTable('users', {
   lastName: varchar('last_name', { length: 100 }),
   profileImageUrl: varchar('profile_image_url', { length: 500 }),
   googleId: varchar('google_id', { length: 255 }).unique(),
+  customUserId: varchar('custom_user_id', { length: 20 }).unique(), // Human-readable ID like "USER001"
   isAdmin: boolean('is_admin').default(false).notNull(),
   isEmailVerified: boolean('is_email_verified').default(false).notNull(),
+  isBlocked: boolean('is_blocked').default(false).notNull(),
+  blockedReason: text('blocked_reason'),
+  blockedAt: timestamp('blocked_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -86,6 +90,7 @@ export const miningEarnings = pgTable('mining_earnings', {
 // Withdrawals table
 export const withdrawals = pgTable('withdrawals', {
   id: serial('id').primaryKey(),
+  withdrawalId: varchar('withdrawal_id', { length: 20 }).unique(), // Auto-generated like "WD001234"
   userId: integer('user_id').notNull(),
   currency: varchar('currency', { length: 10 }).notNull(),
   amount: decimal('amount', { precision: 20, scale: 8 }).notNull(),

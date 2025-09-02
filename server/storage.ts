@@ -47,6 +47,11 @@ export interface IStorage {
   createUser(user: Partial<NewUser>): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | null>;
   getTotalUsers(): Promise<number>;
+  getBlockedUsers(): Promise<User[]>;
+  blockUser(id: number, reason: string, blockedBy: number): Promise<User | null>;
+  unblockUser(id: number, unblockedBy: number): Promise<User | null>;
+  generateCustomUserId(): Promise<string>;
+  generateWithdrawalId(): Promise<string>;
   
   // Mining plans
   getMiningPlans(): Promise<MiningPlan[]>;
@@ -134,6 +139,42 @@ export class PostgresStorage implements IStorage {
   async getTotalUsers(): Promise<number> {
     const result = await db.select({ count: sql<number>`count(*)` }).from(users);
     return result[0].count;
+  }
+
+  async getBlockedUsers(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.isBlocked, true));
+  }
+
+  async blockUser(id: number, reason: string, blockedBy: number): Promise<User | null> {
+    const result = await db.update(users).set({
+      isBlocked: true,
+      blockedReason: reason,
+      blockedAt: sql`NOW()`,
+      updatedAt: sql`NOW()`
+    }).where(eq(users.id, id)).returning();
+    return result[0] || null;
+  }
+
+  async unblockUser(id: number, unblockedBy: number): Promise<User | null> {
+    const result = await db.update(users).set({
+      isBlocked: false,
+      blockedReason: null,
+      blockedAt: null,
+      updatedAt: sql`NOW()`
+    }).where(eq(users.id, id)).returning();
+    return result[0] || null;
+  }
+
+  async generateCustomUserId(): Promise<string> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const userCount = result[0].count;
+    return `USER${String(userCount + 1).padStart(4, '0')}`;
+  }
+
+  async generateWithdrawalId(): Promise<string> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(withdrawals);
+    const withdrawalCount = result[0].count;
+    return `WD${String(withdrawalCount + 1).padStart(6, '0')}`;
   }
 
   // Mining plans

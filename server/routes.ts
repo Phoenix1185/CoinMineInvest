@@ -2,7 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
-import { createTransactionSchema, createWithdrawalSchema, createAnnouncementSchema, createSupportTicketSchema, createTicketMessageSchema, updateTicketSchema, PAYMENT_ADDRESSES } from "@shared/schema";
+import { createTransactionSchema, createWithdrawalSchema, createAnnouncementSchema, createSupportTicketSchema, createTicketMessageSchema, updateTicketSchema, PAYMENT_ADDRESSES, withdrawals } from "@shared/schema";
+import db from './db';
+import { eq } from 'drizzle-orm';
 import { z } from "zod";
 import axios from 'axios';
 import bcrypt from 'bcryptjs';
@@ -152,6 +154,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/withdrawals', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      
+      // Check if user is blocked
+      const user = await storage.getUser(userId);
+      if (user?.isBlocked) {
+        return res.status(403).json({ message: "Your account has been blocked. Please contact support." });
+      }
+      
       const withdrawalData = createWithdrawalSchema.parse(req.body);
 
       // Check if user has sufficient balance
@@ -163,8 +172,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Insufficient balance" });
       }
 
+      // Generate withdrawal ID
+      const withdrawalId = await storage.generateWithdrawalId();
+
       const withdrawal = await storage.createWithdrawal({
         ...withdrawalData,
+        withdrawalId,
         userId
       });
 
@@ -358,14 +371,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { transactionHash, networkFee } = req.body;
 
-      const withdrawal = await storage.updateWithdrawal(id, {
+      // Get withdrawal details first
+      const currentWithdrawal = await db.select().from(withdrawals).where(eq(withdrawals.id, parseInt(id))).limit(1);
+      if (!currentWithdrawal[0]) {
+        return res.status(404).json({ message: "Withdrawal not found" });
+      }
+
+      const withdrawal = currentWithdrawal[0];
+      
+      // When processing withdrawal, deduct balance from user's earnings in BTC equivalent
+      if (withdrawal.currency !== 'BTC') {
+        // Get current crypto prices for conversion
+        const btcPrice = await storage.getCryptoPrice('BTC');
+        const withdrawalCurrencyPrice = await storage.getCryptoPrice(withdrawal.currency);
+        
+        if (btcPrice && withdrawalCurrencyPrice) {
+          // Convert withdrawal amount to BTC equivalent
+          const withdrawalAmountUsd = parseFloat(withdrawal.amount.toString()) * parseFloat(withdrawalCurrencyPrice.price.toString());
+          const btcEquivalent = withdrawalAmountUsd / parseFloat(btcPrice.price.toString());
+          
+          // Create a negative earning to deduct from balance  
+          await storage.createMiningEarning({
+            contractId: 0, // Special contract ID for withdrawals
+            userId: withdrawal.userId,
+            date: new Date(),
+            amount: (-btcEquivalent).toString(),
+            usdValue: (-withdrawalAmountUsd).toString(),
+          });
+        }
+      } else {
+        // For BTC withdrawals, directly deduct the BTC amount
+        const btcPrice = await storage.getCryptoPrice('BTC');
+        if (btcPrice) {
+          const withdrawalAmountUsd = parseFloat(withdrawal.amount.toString()) * parseFloat(btcPrice.price.toString());
+          
+          await storage.createMiningEarning({
+            contractId: 0, // Special contract ID for withdrawals
+            userId: withdrawal.userId,
+            date: new Date(),
+            amount: (-parseFloat(withdrawal.amount.toString())).toString(),
+            usdValue: (-withdrawalAmountUsd).toString(),
+          });
+        }
+      }
+
+      const updatedWithdrawal = await storage.updateWithdrawal(id, {
         status: 'completed',
         transactionHash,
         networkFee: networkFee || 0,
         processedAt: new Date(),
       });
 
-      res.json(withdrawal);
+      res.json(updatedWithdrawal);
     } catch (error) {
       console.error("Error processing withdrawal:", error);
       res.status(500).json({ message: "Failed to process withdrawal" });
@@ -391,6 +448,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error rejecting withdrawal:", error);
       res.status(500).json({ message: "Failed to reject withdrawal" });
+    }
+  });
+
+  // Admin user management routes
+  app.get('/api/admin/blocked-users', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blockedUsers = await storage.getBlockedUsers();
+      res.json(blockedUsers);
+    } catch (error) {
+      console.error("Error fetching blocked users:", error);
+      res.status(500).json({ message: "Failed to fetch blocked users" });
+    }
+  });
+
+  app.post('/api/admin/users/:id/block', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      if (!reason || reason.trim() === '') {
+        return res.status(400).json({ message: "Block reason is required" });
+      }
+
+      const user = await storage.blockUser(parseInt(id), reason, req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "User blocked successfully", user });
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      res.status(500).json({ message: "Failed to block user" });
+    }
+  });
+
+  app.post('/api/admin/users/:id/unblock', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { id } = req.params;
+      const user = await storage.unblockUser(parseInt(id), req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "User unblocked successfully", user });
+    } catch (error) {
+      console.error("Error unblocking user:", error);
+      res.status(500).json({ message: "Failed to unblock user" });
     }
   });
 
@@ -710,12 +828,14 @@ async function initializeAdminUser() {
     if (!existingAdmin) {
       console.log("Creating new admin user...");
       const hashedPassword = await bcrypt.hash(adminPassword, 12);
+      const customUserId = await storage.generateCustomUserId();
       
       await storage.createUser({
         email: adminEmail,
         password: hashedPassword,
         firstName: "Administrator",
         lastName: "CryptoMine",
+        customUserId,
         isEmailVerified: true,
         isAdmin: true,
       });
@@ -725,8 +845,15 @@ async function initializeAdminUser() {
       console.log("Admin user already exists, updating credentials...");
       const hashedPassword = await bcrypt.hash(adminPassword, 12);
       
+      // Generate custom user ID if not exists
+      let customUserId = existingAdmin.customUserId;
+      if (!customUserId) {
+        customUserId = await storage.generateCustomUserId();
+      }
+      
       await storage.updateUser(existingAdmin.id, {
         password: hashedPassword,
+        customUserId,
         isAdmin: true,
         isEmailVerified: true,
         firstName: "Administrator",
