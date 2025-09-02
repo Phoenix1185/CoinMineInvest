@@ -72,14 +72,11 @@ interface EarningsData {
 
 export default function MiningDashboard() {
   const [showAllEarnings, setShowAllEarnings] = useState(false);
-
-  if (showAllEarnings) {
-    return <AllEarningsView onBack={() => setShowAllEarnings(false)} />;
-  }
+  
   const { data: earningsData, isLoading: earningsLoading } = useQuery<EarningsData>({
     queryKey: ["/api/earnings"],
-    refetchInterval: 5000, // Optimized: Refresh every 5 seconds for better performance
-    staleTime: 4000, // Consider data fresh for 4 seconds to prevent unnecessary refetches
+    refetchInterval: 50000, // Refresh every 50 seconds to reduce server load
+    staleTime: 45000, // Consider data fresh for 45 seconds
   });
 
   const { data: contracts = [], isLoading: contractsLoading } = useQuery<MiningContract[]>({
@@ -169,6 +166,11 @@ export default function MiningDashboard() {
   const formatUsd = (amount: number | string) => {
     return `$${Number(amount).toFixed(2)}`;
   };
+
+  // Early return for All Earnings view - after all hooks are called
+  if (showAllEarnings) {
+    return <AllEarningsView onBack={() => setShowAllEarnings(false)} />;
+  }
 
   if (earningsLoading || contractsLoading || transactionsLoading || withdrawalsLoading || announcementsLoading) {
     return (
