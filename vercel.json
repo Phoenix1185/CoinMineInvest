@@ -1,17 +1,21 @@
 {
-  "functions": {
-    "client/src/main.tsx": {
-      "includeFiles": "client/**"
+  "version": 2,
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
-  },
-  "rewrites": [
+  ],
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "running-kimberli-suhailtechlnf-4b28b6a4.koyeb.app/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      }
     }
   ]
 }
