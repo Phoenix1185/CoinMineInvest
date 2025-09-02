@@ -414,9 +414,9 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-500">
-                ${statsLoading ? "..." : adminStats?.totalWithdrawals.toFixed(2) || "0.00"}
+                {statsLoading ? "..." : `${adminStats?.totalWithdrawals.toFixed(8) || "0.00000000"} BTC`}
               </div>
-              <p className="text-xs text-cmc-gray">All completed withdrawals</p>
+              <p className="text-xs text-cmc-gray">All completed withdrawals (BTC equivalent)</p>
             </CardContent>
           </Card>
 

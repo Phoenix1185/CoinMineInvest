@@ -266,14 +266,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const allTransactions = await storage.getAllTransactions();
       const allWithdrawals = await storage.getAllWithdrawals();
+      const cryptoPrices = await storage.getCryptoPrices();
       
       const totalDeposits = allTransactions
         .filter(tx => tx.status === 'approved')
         .reduce((sum, tx) => sum + parseFloat(tx.amount.toString()), 0);
       
-      const totalWithdrawals = allWithdrawals
-        .filter(w => w.status === 'completed')
-        .reduce((sum, w) => sum + parseFloat(w.amount.toString()), 0);
+      // Calculate total withdrawals in BTC equivalent
+      const completedWithdrawals = allWithdrawals.filter(w => w.status === 'completed');
+      let totalWithdrawals = 0;
+      
+      // Helper function to convert withdrawal amount to BTC equivalent
+      const convertToBtcEquivalent = (amount: number, currency: string): number => {
+        if (currency === 'BTC') return amount;
+        
+        const btcPrice = cryptoPrices.find(p => p.symbol === 'BTC')?.price || 0;
+        const currencyPrice = cryptoPrices.find(p => p.symbol === currency)?.price || 0;
+        
+        if (!btcPrice || !currencyPrice) return 0;
+        
+        const usdAmount = amount * parseFloat(currencyPrice.toString());
+        return usdAmount / parseFloat(btcPrice.toString());
+      };
+      
+      for (const withdrawal of completedWithdrawals) {
+        const btcEquivalent = convertToBtcEquivalent(
+          parseFloat(withdrawal.amount.toString()),
+          withdrawal.currency
+        );
+        totalWithdrawals += btcEquivalent;
+      }
       
       const totalUsers = await storage.getTotalUsers();
       const pendingTransactions = await storage.getPendingTransactions();

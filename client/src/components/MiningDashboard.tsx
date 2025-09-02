@@ -154,10 +154,22 @@ export default function MiningDashboard() {
     .filter(tx => tx.status === 'approved')
     .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
 
-  // Calculate total withdrawals (completed withdrawals)
-  const totalWithdrawals = withdrawals
-    .filter(w => w.status === 'completed')
-    .reduce((sum, w) => sum + parseFloat(w.amount), 0);
+  // Calculate total withdrawals (completed withdrawals) in BTC equivalent
+  const completedWithdrawals = withdrawals.filter(w => w.status === 'completed');
+  const totalWithdrawals = completedWithdrawals.reduce((sum, w) => {
+    const amount = parseFloat(w.amount);
+    if (w.currency === 'BTC') return sum + amount;
+    
+    // Convert to BTC equivalent using current prices
+    const btcPrice = cryptoPrices.find((crypto: any) => crypto.symbol === 'BTC')?.price || 0;
+    const currencyPrice = cryptoPrices.find((crypto: any) => crypto.symbol === w.currency)?.price || 0;
+    
+    if (!btcPrice || !currencyPrice) return sum;
+    
+    const usdAmount = amount * parseFloat(currencyPrice);
+    const btcEquivalent = usdAmount / parseFloat(btcPrice);
+    return sum + btcEquivalent;
+  }, 0);
 
   const formatBtc = (amount: number | string) => {
     return `${Number(amount).toFixed(8)} BTC`;
@@ -420,7 +432,10 @@ export default function MiningDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-orange-500 mb-2" data-testid="text-total-withdrawals">
-              {formatUsd(totalWithdrawals)}
+              {formatBtc(totalWithdrawals)}
+            </div>
+            <div className="text-sm text-orange-400">
+              {formatUsd(totalWithdrawals * Number(btcPrice))} USD
             </div>
             <div className="text-sm text-cmc-gray">Successfully Withdrawn</div>
             <div className="mt-4 bg-cmc-dark rounded-lg p-3">
