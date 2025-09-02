@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
-import { createTransactionSchema, createWithdrawalSchema, createAnnouncementSchema, createSupportTicketSchema, createTicketMessageSchema, updateTicketSchema, PAYMENT_ADDRESSES, withdrawals } from "@shared/schema";
+import { createTransactionSchema, createWithdrawalSchema, createAnnouncementSchema, createSupportTicketSchema, createTicketMessageSchema, updateTicketSchema, PAYMENT_ADDRESSES, withdrawals, miningEarnings } from "@shared/schema";
 import db from './db';
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { z } from "zod";
 import axios from 'axios';
 import bcrypt from 'bcryptjs';
@@ -123,18 +123,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User earnings
+  // User earnings (optimized for dashboard - only recent earnings)
   app.get('/api/earnings', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      // Only fetch recent 100 earnings for dashboard performance
       const [earnings, totals] = await Promise.all([
-        storage.getUserEarnings(userId),
+        storage.getUserEarnings(userId, 100),
         storage.getUserTotalEarnings(userId)
       ]);
       res.json({ earnings, totals });
     } catch (error) {
       console.error("Error fetching earnings:", error);
       res.status(500).json({ message: "Failed to fetch earnings" });
+    }
+  });
+
+  // All user earnings (for detailed view with pagination)
+  app.get('/api/earnings/all', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+      
+      // Get paginated earnings and total count
+      const [earnings, totalCount] = await Promise.all([
+        db.select().from(miningEarnings)
+          .where(eq(miningEarnings.userId, userId))
+          .orderBy(desc(miningEarnings.date))
+          .limit(limit)
+          .offset(offset),
+        db.select({ count: sql<number>`count(*)` })
+          .from(miningEarnings)
+          .where(eq(miningEarnings.userId, userId))
+      ]);
+      
+      const totalPages = Math.ceil(Number(totalCount[0].count) / limit);
+      
+      res.json({
+        earnings,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalRecords: Number(totalCount[0].count),
+          limit
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching all earnings:", error);
+      res.status(500).json({ message: "Failed to fetch all earnings" });
     }
   });
 

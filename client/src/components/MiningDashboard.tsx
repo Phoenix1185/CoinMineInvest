@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import RealTimeBalanceTicker from "./RealTimeBalanceTicker";
+import AllEarningsView from "./AllEarningsView";
 
 interface MiningEarning {
   id: number;
@@ -70,10 +71,15 @@ interface EarningsData {
 }
 
 export default function MiningDashboard() {
+  const [showAllEarnings, setShowAllEarnings] = useState(false);
+
+  if (showAllEarnings) {
+    return <AllEarningsView onBack={() => setShowAllEarnings(false)} />;
+  }
   const { data: earningsData, isLoading: earningsLoading } = useQuery<EarningsData>({
     queryKey: ["/api/earnings"],
-    refetchInterval: 2000, // Optimized: Refresh every 2 seconds instead of 1 for better performance
-    staleTime: 1000, // Consider data fresh for 1 second to prevent unnecessary refetches
+    refetchInterval: 5000, // Optimized: Refresh every 5 seconds for better performance
+    staleTime: 4000, // Consider data fresh for 4 seconds to prevent unnecessary refetches
   });
 
   const { data: contracts = [], isLoading: contractsLoading } = useQuery<MiningContract[]>({
@@ -310,17 +316,16 @@ export default function MiningDashboard() {
                   +{formatBtc(yesterdaysTotalBtc)}
                 </div>
               </div>
-              <Link href="/earnings">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="w-full border-cmc-blue text-cmc-blue hover:bg-cmc-blue hover:text-white"
-                  data-testid="button-view-all-earnings"
-                >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  View All Earnings
-                </Button>
-              </Link>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setShowAllEarnings(true)}
+                className="w-full border-cmc-blue text-cmc-blue hover:bg-cmc-blue hover:text-white"
+                data-testid="button-view-all-earnings"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                View All Earnings
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -500,7 +505,18 @@ export default function MiningDashboard() {
       {/* Recent Earnings */}
       <Card className="bg-cmc-card border-gray-700" data-testid="card-recent-earnings">
         <CardHeader>
-          <CardTitle className="text-xl font-bold text-white">Recent Earnings</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold text-white">Recent Earnings</CardTitle>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => setShowAllEarnings(true)}
+              className="text-cmc-blue hover:bg-cmc-blue/10"
+              data-testid="button-view-all-earnings-header"
+            >
+              View All
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {earnings.length === 0 ? (

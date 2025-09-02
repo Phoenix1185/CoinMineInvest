@@ -275,8 +275,14 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
-  async getUserEarnings(userId: number): Promise<MiningEarning[]> {
-    return await db.select().from(miningEarnings).where(eq(miningEarnings.userId, userId)).orderBy(desc(miningEarnings.date));
+  async getUserEarnings(userId: number, limit?: number): Promise<MiningEarning[]> {
+    const query = db.select().from(miningEarnings).where(eq(miningEarnings.userId, userId)).orderBy(desc(miningEarnings.date));
+    
+    if (limit) {
+      query.limit(limit);
+    }
+    
+    return await query;
   }
 
   async getUserTotalEarnings(userId: number): Promise<{ totalBtc: number; totalUsd: number }> {
