@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "client/src/main.tsx": {
+      "includeFiles": "client/**"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://your-backend-url.onrender.com/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
