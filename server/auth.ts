@@ -124,12 +124,16 @@ export function setupAuth(app: Express) {
       // Hash password
       const hashedPassword = await bcrypt.hash(userData.password, 12);
 
+      // Generate custom user ID
+      const customUserId = await storage.generateCustomUserId();
+
       // Create user
       const user = await storage.createUser({
         email: userData.email,
         password: hashedPassword,
         firstName: userData.firstName,
         lastName: userData.lastName,
+        customUserId,
         isEmailVerified: false,
         isAdmin: false,
       });
@@ -165,6 +169,16 @@ export function setupAuth(app: Express) {
       const isValidPassword = await bcrypt.compare(loginData.password, user.password);
       if (!isValidPassword) {
         return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Check if user account is blocked
+      if (user.isBlocked) {
+        return res.status(403).json({ 
+          message: `Your account has been blocked. ${user.blockedReason ? `Reason: ${user.blockedReason}` : 'Please contact support for assistance.'}`,
+          isBlocked: true,
+          blockedReason: user.blockedReason,
+          blockedAt: user.blockedAt
+        });
       }
 
       // Create session
@@ -248,6 +262,12 @@ export function setupAuth(app: Express) {
 
       if (!user) {
         return res.redirect('/?error=auth_failed');
+      }
+
+      // Check if user account is blocked
+      if (user.isBlocked) {
+        const reason = user.blockedReason ? encodeURIComponent(user.blockedReason) : '';
+        return res.redirect(`/?error=account_blocked&reason=${reason}`);
       }
 
       // Create session

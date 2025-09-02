@@ -132,7 +132,7 @@ export default function WithdrawalPage() {
 
     createWithdrawalMutation.mutate({
       currency,
-      amount,
+      amount: amountNum,
       walletAddress: walletAddress.trim(),
     });
   };

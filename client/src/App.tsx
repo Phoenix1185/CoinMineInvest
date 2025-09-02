@@ -11,6 +11,7 @@ import Admin from "@/pages/admin";
 import EarningsPage from "@/components/EarningsPage";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
+import PublicSupportForm from "@/components/PublicSupportForm";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
       {/* Public routes - accessible to everyone */}
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
+      <Route path="/support" component={PublicSupportForm} />
       
       {!isAuthenticated ? (
         <>

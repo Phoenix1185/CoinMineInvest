@@ -782,7 +782,7 @@ export default function Admin() {
                           <TableRow key={user.id} className="border-gray-700" data-testid={`row-user-${user.id}`}>
                             <TableCell className="font-mono text-sm">
                               <Badge variant="outline" className="border-cmc-blue text-cmc-blue">
-                                {user.userId || `USER${user.id.toString().padStart(4, '0')}`}
+                                {(user as any).customUserId || `USER${user.id.toString().padStart(4, '0')}`}
                               </Badge>
                             </TableCell>
                             <TableCell>
