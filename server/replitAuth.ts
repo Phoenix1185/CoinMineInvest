@@ -57,13 +57,28 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-  });
+  // Check if user exists by email first
+  let user = await storage.getUserByEmail(claims["email"]);
+  
+  if (!user) {
+    // Generate custom user ID
+    const customUserId = await storage.generateCustomUserId();
+    
+    // Create new user
+    user = await storage.createUser({
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      customUserId,
+      isEmailVerified: true,
+      isAdmin: false,
+    });
+  } else if (!user.customUserId) {
+    // Add customUserId to existing users who don't have one
+    const customUserId = await storage.generateCustomUserId();
+    await storage.updateUser(user.id, { customUserId });
+  }
 }
 
 export async function setupAuth(app: Express) {

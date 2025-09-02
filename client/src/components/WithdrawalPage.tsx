@@ -44,11 +44,11 @@ export default function WithdrawalPage() {
     queryKey: ["/api/earnings"],
   });
 
-  const { data: withdrawals = [], isLoading: withdrawalsLoading } = useQuery({
+  const { data: withdrawals = [], isLoading: withdrawalsLoading } = useQuery<Withdrawal[]>({
     queryKey: ["/api/withdrawals"],
   });
 
-  const totals = earningsData?.totals || { totalBtc: "0", totalUsd: "0" };
+  const totals = (earningsData as any)?.totals || { totalBtc: "0", totalUsd: "0" };
   const availableBalance = parseFloat(totals.totalBtc);
 
   const createWithdrawalMutation = useMutation({

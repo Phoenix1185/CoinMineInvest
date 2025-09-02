@@ -229,6 +229,9 @@ export function setupAuth(app: Express) {
             googleId: profile.sub
           });
         } else {
+          // Generate custom user ID
+          const customUserId = await storage.generateCustomUserId();
+          
           // Create new user
           user = await storage.createUser({
             email: profile.email!,
@@ -236,6 +239,7 @@ export function setupAuth(app: Express) {
             lastName: profile.family_name,
             profileImageUrl: profile.picture,
             googleId: profile.sub,
+            customUserId,
             isEmailVerified: true,
             isAdmin: false,
           });

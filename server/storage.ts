@@ -47,6 +47,7 @@ export interface IStorage {
   createUser(user: Partial<NewUser>): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | null>;
   getTotalUsers(): Promise<number>;
+  getAllUsers(): Promise<User[]>;
   getBlockedUsers(): Promise<User[]>;
   blockUser(id: number, reason: string, blockedBy: number): Promise<User | null>;
   unblockUser(id: number, unblockedBy: number): Promise<User | null>;
@@ -139,6 +140,10 @@ export class PostgresStorage implements IStorage {
   async getTotalUsers(): Promise<number> {
     const result = await db.select({ count: sql<number>`count(*)` }).from(users);
     return result[0].count;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   async getBlockedUsers(): Promise<User[]> {

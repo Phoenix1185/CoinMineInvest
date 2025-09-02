@@ -177,8 +177,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const withdrawal = await storage.createWithdrawal({
         ...withdrawalData,
-        withdrawalId,
         userId
+      });
+
+      // Update withdrawal with generated ID
+      const updatedWithdrawal = await storage.updateWithdrawal(withdrawal.id, {
+        withdrawalId
       });
 
       res.json(withdrawal);
@@ -452,6 +456,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin user management routes
+  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   app.get('/api/admin/blocked-users', isAuthenticated, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
@@ -608,6 +626,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Support Ticket endpoints
+
+  // Public support contact (for logged out users)
+  app.post('/api/contact-support', async (req, res) => {
+    try {
+      const { name, email, subject, message } = req.body;
+
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // For now, just return success. In a real system, you'd send an email or store in a contact form table
+      console.log('Public support contact received:', { name, email, subject, message });
+      
+      res.json({ message: "Support request submitted successfully. We will get back to you soon." });
+    } catch (error) {
+      console.error("Error submitting support request:", error);
+      res.status(500).json({ message: "Failed to submit support request" });
+    }
+  });
 
   // Get user's support tickets
   app.get('/api/support-tickets', isAuthenticated, async (req: any, res) => {

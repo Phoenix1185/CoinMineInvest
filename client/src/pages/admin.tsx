@@ -65,6 +65,18 @@ interface Announcement {
   updatedAt: string;
 }
 
+interface User {
+  id: number;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  isBlocked: boolean;
+  blockReason?: string;
+  createdAt: string;
+  isAdmin: boolean;
+}
+
 export default function Admin() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -73,6 +85,9 @@ export default function Admin() {
   const [selectedTransaction, setSelectedTransaction] = useState<number | null>(null);
   const [withdrawalRejectReason, setWithdrawalRejectReason] = useState("");
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<number | null>(null);
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [blockReason, setBlockReason] = useState("");
+  const [unblockUser, setUnblockUser] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   
   // Announcement management state
@@ -116,6 +131,11 @@ export default function Admin() {
 
   const { data: announcements = [], isLoading: announcementsLoading } = useQuery<Announcement[]>({
     queryKey: ["/api/admin/announcements"],
+    enabled: !!user?.isAdmin,
+  });
+
+  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
     enabled: !!user?.isAdmin,
   });
 
@@ -244,6 +264,50 @@ export default function Admin() {
       toast({
         title: "Error",
         description: "Failed to reject withdrawal",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // User management mutations
+  const blockUserMutation = useMutation({
+    mutationFn: async ({ userId, reason }: { userId: number; reason: string }) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/block`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User has been blocked successfully",
+      });
+      setSelectedUser(null);
+      setBlockReason("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to block user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unblockUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/unblock`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User has been unblocked successfully",
+      });
+      setUnblockUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to unblock user",
         variant: "destructive",
       });
     },
@@ -408,6 +472,7 @@ export default function Admin() {
           <TabsList className="bg-cmc-card border-gray-700">
             <TabsTrigger value="transactions" className="data-[state=active]:bg-cmc-blue">Transactions</TabsTrigger>
             <TabsTrigger value="withdrawals" className="data-[state=active]:bg-cmc-blue">Withdrawals</TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-cmc-blue">Users</TabsTrigger>
             <TabsTrigger value="announcements" className="data-[state=active]:bg-cmc-blue">Announcements</TabsTrigger>
             <TabsTrigger value="support" className="data-[state=active]:bg-cmc-blue">Support</TabsTrigger>
           </TabsList>
@@ -673,6 +738,158 @@ export default function Admin() {
                                     </div>
                                   </DialogContent>
                                 </Dialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <Card className="bg-cmc-card border-gray-700" data-testid="card-users">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-white">User Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {usersLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-cmc-gray">Loading users...</div>
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-cmc-gray" data-testid="text-no-users">No users found</div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-700">
+                          <TableHead className="text-cmc-gray">User ID</TableHead>
+                          <TableHead className="text-cmc-gray">Name</TableHead>
+                          <TableHead className="text-cmc-gray">Email</TableHead>
+                          <TableHead className="text-cmc-gray">Status</TableHead>
+                          <TableHead className="text-cmc-gray">Joined</TableHead>
+                          <TableHead className="text-cmc-gray">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user: User) => (
+                          <TableRow key={user.id} className="border-gray-700" data-testid={`row-user-${user.id}`}>
+                            <TableCell className="font-mono text-sm">
+                              <Badge variant="outline" className="border-cmc-blue text-cmc-blue">
+                                {user.userId || `USER${user.id.toString().padStart(4, '0')}`}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-white font-medium">{user.firstName} {user.lastName}</span>
+                                {user.isAdmin && (
+                                  <Badge variant="outline" className="border-orange-500 text-orange-500 w-fit mt-1 text-xs">
+                                    Admin
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-cmc-gray">
+                              {user.email}
+                            </TableCell>
+                            <TableCell>
+                              {user.isBlocked ? (
+                                <Badge variant="destructive" className="bg-red-600 text-white">
+                                  Blocked
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="border-green-500 text-green-500">
+                                  Active
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-cmc-gray">
+                              {new Date(user.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                {!user.isAdmin && (
+                                  <>
+                                    {!user.isBlocked ? (
+                                      <Dialog>
+                                        <DialogTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => setSelectedUser(user.id)}
+                                            className="bg-red-600 hover:bg-red-700"
+                                            data-testid={`button-block-${user.id}`}
+                                          >
+                                            <X className="w-4 h-4 mr-1" />
+                                            Block
+                                          </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="bg-cmc-card border-gray-700">
+                                          <DialogHeader>
+                                            <DialogTitle className="text-white">Block User</DialogTitle>
+                                          </DialogHeader>
+                                          <div className="space-y-4">
+                                            <p className="text-cmc-gray">
+                                              Are you sure you want to block {user.firstName} {user.lastName}?
+                                            </p>
+                                            <div>
+                                              <Label htmlFor="blockReason" className="text-white">Reason for blocking</Label>
+                                              <Textarea
+                                                id="blockReason"
+                                                value={blockReason}
+                                                onChange={(e) => setBlockReason(e.target.value)}
+                                                placeholder="Enter reason for blocking this user..."
+                                                className="bg-cmc-dark border-gray-600 text-white mt-2"
+                                                data-testid="textarea-block-reason"
+                                              />
+                                            </div>
+                                            <div className="flex justify-end space-x-2">
+                                              <Button
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setBlockReason("");
+                                                  setSelectedUser(null);
+                                                }}
+                                                data-testid="button-cancel-block"
+                                              >
+                                                Cancel
+                                              </Button>
+                                              <Button
+                                                variant="destructive"
+                                                onClick={() => {
+                                                  if (selectedUser && blockReason.trim()) {
+                                                    blockUserMutation.mutate({ userId: selectedUser, reason: blockReason.trim() });
+                                                  }
+                                                }}
+                                                disabled={!blockReason.trim() || blockUserMutation.isPending}
+                                                data-testid="button-confirm-block"
+                                              >
+                                                Block User
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </DialogContent>
+                                      </Dialog>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => unblockUserMutation.mutate(user.id)}
+                                        disabled={unblockUserMutation.isPending}
+                                        className="bg-green-600 hover:bg-green-700"
+                                        data-testid={`button-unblock-${user.id}`}
+                                      >
+                                        <Check className="w-4 h-4 mr-1" />
+                                        Unblock
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
