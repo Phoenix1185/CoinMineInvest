@@ -281,7 +281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           ...tx,
           userEmail: user?.email || 'Unknown',
-          userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown'
+          userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+          userBindId: user?.customUserId || 'Unknown'
         };
       });
       
@@ -378,7 +379,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const withdrawals = await storage.getPendingWithdrawals();
-      res.json(withdrawals);
+      
+      // Get all unique user IDs to fetch in batch
+      const userIds = Array.from(new Set(withdrawals.map(withdrawal => withdrawal.userId)));
+      
+      // Fetch all users in a single operation for better performance
+      const users = await Promise.all(
+        userIds.map(id => storage.getUser(id))
+      );
+      
+      // Create a user map for quick lookup
+      const userMap = new Map();
+      users.forEach((user, index) => {
+        if (user) {
+          userMap.set(userIds[index], user);
+        }
+      });
+      
+      // Enhance withdrawals with user details
+      const enhancedWithdrawals = withdrawals.map(withdrawal => {
+        const user = userMap.get(withdrawal.userId);
+        return {
+          ...withdrawal,
+          userEmail: user?.email || 'Unknown',
+          userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+          userBindId: user?.customUserId || 'Unknown'
+        };
+      });
+      
+      res.json(enhancedWithdrawals);
     } catch (error) {
       console.error("Error fetching pending withdrawals:", error);
       res.status(500).json({ message: "Failed to fetch withdrawals" });
@@ -755,7 +784,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/support-tickets', isAdmin, async (req: any, res) => {
     try {
       const tickets = await storage.getAllSupportTickets();
-      res.json(tickets);
+      
+      // Get all unique user IDs to fetch in batch
+      const userIds = Array.from(new Set(tickets.map(ticket => ticket.userId)));
+      
+      // Fetch all users in a single operation for better performance
+      const users = await Promise.all(
+        userIds.map(id => storage.getUser(id))
+      );
+      
+      // Create a user map for quick lookup
+      const userMap = new Map();
+      users.forEach((user, index) => {
+        if (user) {
+          userMap.set(userIds[index], user);
+        }
+      });
+      
+      // Enhance tickets with user details
+      const enhancedTickets = tickets.map(ticket => {
+        const user = userMap.get(ticket.userId);
+        return {
+          ...ticket,
+          userEmail: user?.email || 'Unknown',
+          userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+          userBindId: user?.customUserId || 'Unknown'
+        };
+      });
+      
+      res.json(enhancedTickets);
     } catch (error) {
       console.error("Error fetching all support tickets:", error);
       res.status(500).json({ message: "Failed to fetch support tickets" });

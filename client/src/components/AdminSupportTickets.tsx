@@ -43,6 +43,9 @@ interface SupportTicket {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
+  userEmail?: string;
+  userName?: string;
+  userBindId?: string;
 }
 
 interface TicketMessage {
@@ -315,7 +318,11 @@ export default function AdminSupportTickets() {
                         <h4 className="font-semibold text-white truncate" data-testid={`text-admin-ticket-subject-${ticket.id}`}>
                           #{ticket.id} - {ticket.subject}
                         </h4>
-                        <p className="text-xs text-cmc-gray">User ID: {ticket.userId}</p>
+                        <div className="text-xs text-cmc-gray space-y-1">
+                          <p>User: {ticket.userName || 'Unknown'}</p>
+                          <p>Bind ID: {ticket.userBindId || 'Unknown'}</p>
+                          <p>Email: {ticket.userEmail || 'Unknown'}</p>
+                        </div>
                       </div>
                       <div className="flex flex-col items-end space-y-1">
                         <Badge className={priorityColors[ticket.priority]} data-testid={`badge-admin-priority-${ticket.id}`}>
@@ -355,7 +362,7 @@ export default function AdminSupportTickets() {
                       #{selectedTicket.id} - {selectedTicket.subject}
                     </CardTitle>
                     <CardDescription className="text-cmc-gray">
-                      User ID: {selectedTicket.userId} • {selectedTicket.category} • Created {formatDistanceToNow(new Date(selectedTicket.createdAt), { addSuffix: true })}
+                      User: {selectedTicket.userName || 'Unknown'} ({selectedTicket.userBindId || 'Unknown'}) • {selectedTicket.category} • Created {formatDistanceToNow(new Date(selectedTicket.createdAt), { addSuffix: true })}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -442,7 +449,7 @@ export default function AdminSupportTickets() {
                           </div>
                           <div className="flex-1 bg-gray-800 rounded-lg p-3">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium text-white">User #{selectedTicket.userId}</span>
+                              <span className="text-sm font-medium text-white">{selectedTicket.userName || `User #${selectedTicket.userId}`}</span>
                               <span className="text-xs text-cmc-gray">
                                 {formatDistanceToNow(new Date(selectedTicket.createdAt), { addSuffix: true })}
                               </span>
