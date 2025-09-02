@@ -14,7 +14,11 @@ This guide provides step-by-step instructions for deploying CryptoMine Pro to pr
 Before deploying, ensure you have:
 
 - Node.js 18+ installed locally
-- Git repository with your code
+- Git repository with your code pushed to GitHub
+- All deployment files are present (automatically included):
+  - `vercel.json` - Vercel configuration
+  - `.env.example` - Environment variable documentation
+  - `package.json` - Build scripts
 - Accounts created on:
   - [Vercel](https://vercel.com) (for frontend)
   - [Render](https://render.com) or [Koyeb](https://koyeb.com) (for backend)
@@ -30,16 +34,24 @@ Before deploying, ensure you have:
 5. Copy the connection string (DATABASE_URL)
 
 ### Step 2: Setup Database Schema
-1. In your local project, create a `.env` file:
+1. In your local project, create a `.env` file using the provided template:
 ```bash
-DATABASE_URL="postgresql://username:password@host/dbname?sslmode=require"
+cp .env.example .env
 ```
 
-2. Install dependencies and push schema:
+2. Edit `.env` and add your Neon database URL:
+```bash
+DATABASE_URL="postgresql://username:password@host/dbname?sslmode=require"
+SESSION_SECRET="your-secure-random-string"
+```
+
+3. Install dependencies and push schema:
 ```bash
 npm install
 npm run db:push
 ```
+
+> **Note**: Check `.env.example` for a complete list of all required environment variables.
 
 ## Part 2: Backend Deployment
 
@@ -73,10 +85,11 @@ services:
         sync: false
 ```
 
-2. Add production start script to `package.json`:
+2. The production scripts are already configured in `package.json`:
 ```json
 {
   "scripts": {
+    "start": "NODE_ENV=production node dist/index.js",
     "start:prod": "NODE_ENV=production tsx server/index.ts"
   }
 }
@@ -89,8 +102,8 @@ services:
 4. Configure:
    - **Name**: cryptomine-pro-backend
    - **Environment**: Node
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm run start:prod`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
 
 5. Set Environment Variables:
    - `NODE_ENV`: `production`
@@ -127,8 +140,8 @@ koyeb service create \
   --app cryptomine-pro-backend \
   --git github.com/yourusername/your-repo \
   --git-branch main \
-  --git-build-command "npm install" \
-  --git-run-command "npm run start:prod" \
+  --git-build-command "npm install && npm run build" \
+  --git-run-command "npm start" \
   --port 5000 \
   --name backend
 ```
@@ -143,67 +156,72 @@ koyeb secret create GOOGLE_CLIENT_SECRET --value "your-google-client-secret"
 
 ## Part 3: Frontend Deployment (Vercel)
 
-### Step 1: Prepare Frontend Build
-1. Update `vite.config.ts` for production:
-```typescript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+### Step 1: Verify Required Files
+The project already includes all necessary deployment files:
 
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './client/src'),
-      '@assets': path.resolve(__dirname, './attached_assets'),
-    },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-  },
-  server: {
-    port: 3000,
-  },
-})
-```
-
-2. Create `vercel.json` in project root:
+1. **`vercel.json`** (already created):
 ```json
 {
-  "functions": {
-    "client/src/main.tsx": {
-      "includeFiles": "client/**"
-    }
-  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
+  "framework": null,
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://your-backend-url.onrender.com/api/$1"
+      "destination": "https://your-backend-url.koyeb.app/api/$1"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+        }
+      ]
+    }
   ]
 }
 ```
+
+2. **Update the backend URL** in `vercel.json` to match your actual Koyeb deployment:
+   - Replace `https://your-backend-url.koyeb.app` with your actual backend URL
+   - For example: `https://running-kimberli-suhailtechlnf-4b28b6a4.koyeb.app`
 
 ### Step 2: Deploy to Vercel
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
 2. Click "New Project"
 3. Import your Git repository
 4. Configure:
-   - **Framework**: Vite
+   - **Framework**: Other
    - **Root Directory**: `./`
    - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
+   - **Output Directory**: `dist/public`
    - **Install Command**: `npm install`
 
 5. Set Environment Variables:
-   - `VITE_API_URL`: Your backend URL (e.g., `https://your-app.onrender.com`)
+   - `VITE_API_URL`: Your backend URL (e.g., `https://running-kimberli-suhailtechlnf-4b28b6a4.koyeb.app`)
 
 6. Click "Deploy"
+
+> **Important**: The frontend is configured to automatically use your backend URL in production. In development, it uses relative URLs to work with the local server.
 
 ## Part 4: Configure OAuth & Final Setup
 
@@ -285,22 +303,25 @@ app.use('/api', (req, res, next) => {
 
 ## Environment Variables Reference
 
-### Backend (.env)
+All required environment variables are documented in `.env.example`.
+
+### Backend (Koyeb/Render)
 ```bash
 NODE_ENV=production
-DATABASE_URL=postgresql://...
-SESSION_SECRET=your-secure-secret
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=https://your-backend-url/auth/google/callback
-FRONTEND_URL=https://your-frontend-url.vercel.app
 PORT=5000
+DATABASE_URL=postgresql://username:password@host/database?sslmode=require
+SESSION_SECRET=your-super-secret-session-key-here
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+GOOGLE_REDIRECT_URI=https://your-backend-url.koyeb.app/api/auth/google/callback
 ```
 
 ### Frontend (Vercel)
 ```bash
-VITE_API_URL=https://your-backend-url
+VITE_API_URL=https://your-backend-url.koyeb.app
 ```
+
+> **Important**: Replace `your-backend-url.koyeb.app` with your actual deployed backend URL.
 
 ## Monitoring & Maintenance
 
