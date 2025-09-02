@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://your-backend-url.onrender.com/api/$1"
+      "destination": "https://running-kimberli-suhailtechlnf-4b28b6a4.koyeb.app/api/$1"
     },
     {
       "source": "/(.*)",
