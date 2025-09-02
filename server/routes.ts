@@ -177,8 +177,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const btcPrice = cryptoPrices.find((p: any) => p.symbol === "BTC")?.price || 0;
         const currencyPrice = cryptoPrices.find((p: any) => p.symbol === requestedCurrency)?.price || 0;
         
-        if (!btcPrice || !currencyPrice) {
-          return res.status(400).json({ message: "Unable to get current exchange rates" });
+        if (!btcPrice) {
+          return res.status(400).json({ message: "Unable to get BTC exchange rate. Please try again later." });
+        }
+        
+        if (!currencyPrice) {
+          return res.status(400).json({ message: `${requestedCurrency} exchange rate not available. Please try BTC, ETH, USDT, BNB, or SOL.` });
         }
         
         // Convert: requested amount * currency price = USD value

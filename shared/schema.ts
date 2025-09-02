@@ -260,13 +260,11 @@ export const PAYMENT_ADDRESSES = {
   ETH: '0x09f616C4118870CcB2BE1aCE1EAc090bF443833B',
 };
 
-// Supported withdrawal currencies
+// Supported withdrawal currencies (only currencies with payment addresses and price data)
 export const WITHDRAWAL_CURRENCIES = [
   { symbol: 'BTC', name: 'Bitcoin', icon: '₿' },
   { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ' },
   { symbol: 'USDT', name: 'Tether USDT', icon: '₮' },
   { symbol: 'BNB', name: 'Binance Coin', icon: 'BNB' },
   { symbol: 'SOL', name: 'Solana', icon: 'SOL' },
-  { symbol: 'ADA', name: 'Cardano', icon: 'ADA' },
-  { symbol: 'DOT', name: 'Polkadot', icon: 'DOT' },
 ];
