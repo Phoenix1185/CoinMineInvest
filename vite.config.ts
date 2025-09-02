@@ -29,7 +29,7 @@ export default defineConfig({
     sourcemap: false,
   },
   server: {
-    port: 3000,
+    port: 5000,
     fs: {
       strict: true,
       deny: ["**/.*"],
