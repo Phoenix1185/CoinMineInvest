@@ -86,10 +86,12 @@ export default function MiningDashboard() {
 
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
+    refetchInterval: 30000, // Refresh every 30 seconds to stay current
   });
 
   const { data: withdrawals = [], isLoading: withdrawalsLoading } = useQuery<Withdrawal[]>({
     queryKey: ["/api/withdrawals"],
+    refetchInterval: 30000, // Refresh every 30 seconds to catch admin approval updates
   });
 
   // Fetch real-time crypto prices for live USD conversion
