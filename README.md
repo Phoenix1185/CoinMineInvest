@@ -102,12 +102,14 @@ The application will be available at `http://localhost:5000`
 
 ## 🚀 Production Deployment
 
+**Cross-Origin Architecture**: Frontend hosted on Vercel, Backend on Koyeb with proper session-based authentication.
+
 For complete production deployment instructions, see **[DEPLOYMENT.md](./DEPLOYMENT.md)** which includes:
 
 - **Frontend deployment to Vercel**
-- **Backend deployment to Render or Koyeb**
+- **Backend deployment to Koyeb** 
 - **Database setup with Neon PostgreSQL**
-- **OAuth configuration**
+- **Cross-origin authentication configuration**
 - **Environment variables setup**
 - **Troubleshooting guide**
 
@@ -116,13 +118,13 @@ For complete production deployment instructions, see **[DEPLOYMENT.md](./DEPLOYM
 #### Frontend (Vercel)
 1. Connect your Git repository to Vercel
 2. Set build command: `npm run build`
-3. Set output directory: `dist`
-4. Add environment variable: `VITE_API_URL=https://your-backend-url`
+3. Set output directory: `dist/public`
+4. Add environment variable: `VITE_API_URL=https://your-koyeb-backend-url.koyeb.app`
 
-#### Backend (Render/Koyeb)
-1. Connect your Git repository
-2. Set build command: `npm install`
-3. Set start command: `npm run start:prod`
+#### Backend (Koyeb)
+1. Connect your Git repository to Koyeb
+2. Set build command: `npm run build`
+3. Set start command: `npm start`
 4. Configure environment variables (DATABASE_URL, SESSION_SECRET, etc.)
 
 #### Database (Neon)
@@ -132,28 +134,24 @@ For complete production deployment instructions, see **[DEPLOYMENT.md](./DEPLOYM
 
 ### Environment Variables for Production
 
-#### Backend
+#### Backend (Koyeb)
 ```bash
 NODE_ENV=production
 DATABASE_URL=postgresql://...  # Neon connection string
-SESSION_SECRET=secure-random-string
-GOOGLE_CLIENT_ID=your-google-oauth-id
-GOOGLE_CLIENT_SECRET=your-google-oauth-secret
-GOOGLE_REDIRECT_URI=https://your-backend-url/auth/google/callback
-FRONTEND_URL=https://your-frontend-url.vercel.app
+SESSION_SECRET=secure-random-string-minimum-32-chars
 ```
 
-#### Frontend
+#### Frontend (Vercel)
 ```bash
-VITE_API_URL=https://your-backend-url
+VITE_API_URL=https://your-koyeb-backend-url.koyeb.app
 ```
 
 ## 🔧 Configuration
 
 ### Admin Account
 An admin account is automatically created on first startup:
-- Email: `admin@cryptomine.pro`
-- Password: `admin123`
+- Email: `fredokcee1@gmail.com`
+- Password: `@Damilola30`
 
 **Important**: Change the admin password immediately after deployment!
 
@@ -243,16 +241,23 @@ This has been fixed in the latest version. The admin dashboard now properly disp
 
 ## 🎯 Latest Updates
 
-✅ **Fixed User Display Issues**
-- Admin dashboard now shows user names and bind IDs instead of "unknown"
+✅ **Fixed Cross-Origin Authentication (September 2025)**
+- Fixed session cookie configuration for Vercel→Koyeb deployment
+- Implemented proper `sameSite: 'none'` and `secure: true` for production
+- Users now stay logged in after page refresh across domains
+- Improved authentication error detection and handling
+- Standardized login/register response format
+
+✅ **Enhanced User Management**
+- Admin dashboard shows user names and bind IDs instead of "unknown"
 - Support tickets display full user information
 - Withdrawal requests show user details
 - Transaction management includes user bind IDs
 
-✅ **Enhanced Admin Features**
-- Improved user information display across all admin panels
-- Better user identification with bind ID system
-- Enhanced support ticket management
+✅ **Production Ready**
+- Cross-origin authentication working between Vercel and Koyeb
+- Complete deployment instructions with troubleshooting
+- Optimized for production performance and security
 
 ## 🤝 Contributing
 
