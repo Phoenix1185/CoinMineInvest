@@ -1,171 +1,330 @@
-import { pgTable, serial, varchar, text, integer, boolean, timestamp, decimal, pgEnum } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import mongoose, { Schema, Document } from "mongoose";
 import { z } from "zod";
 
-// Status enums
-export const transactionStatusEnum = pgEnum('transaction_status', ['pending', 'approved', 'rejected']);
-export const withdrawalStatusEnum = pgEnum('withdrawal_status', ['pending', 'processing', 'completed', 'rejected']);
-export const ticketStatusEnum = pgEnum('ticket_status', ['open', 'in_progress', 'resolved', 'closed']);
-export const ticketPriorityEnum = pgEnum('ticket_priority', ['low', 'medium', 'high', 'urgent']);
+// Define the status enums for validation
+export const transactionStatusValues = ['pending', 'approved', 'rejected'] as const;
+export const withdrawalStatusValues = ['pending', 'processing', 'completed', 'rejected'] as const;
+export const ticketStatusValues = ['open', 'in_progress', 'resolved', 'closed'] as const;
+export const ticketPriorityValues = ['low', 'medium', 'high', 'urgent'] as const;
 
-// User table
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  password: varchar('password', { length: 255 }),
-  firstName: varchar('first_name', { length: 100 }),
-  lastName: varchar('last_name', { length: 100 }),
-  profileImageUrl: varchar('profile_image_url', { length: 500 }),
-  googleId: varchar('google_id', { length: 255 }).unique(),
-  customUserId: varchar('custom_user_id', { length: 20 }).unique(), // Human-readable ID like "USER001"
-  isAdmin: boolean('is_admin').default(false).notNull(),
-  isEmailVerified: boolean('is_email_verified').default(false).notNull(),
-  isBlocked: boolean('is_blocked').default(false).notNull(),
-  blockedReason: text('blocked_reason'),
-  blockedAt: timestamp('blocked_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// User interface
+export interface IUser extends Document {
+  _id: mongoose.Types.ObjectId;
+  email: string;
+  password?: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  googleId?: string;
+  customUserId?: string; // Human-readable ID like "USER001"
+  isAdmin: boolean;
+  isEmailVerified: boolean;
+  isBlocked: boolean;
+  blockedReason?: string;
+  blockedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// User schema
+const userSchema = new Schema<IUser>({
+  email: { type: String, required: true, unique: true, maxlength: 255 },
+  password: { type: String, maxlength: 255 },
+  firstName: { type: String, maxlength: 100 },
+  lastName: { type: String, maxlength: 100 },
+  profileImageUrl: { type: String, maxlength: 500 },
+  googleId: { type: String, unique: true, sparse: true, maxlength: 255 },
+  customUserId: { type: String, unique: true, sparse: true, maxlength: 20 },
+  isAdmin: { type: Boolean, default: false, required: true },
+  isEmailVerified: { type: Boolean, default: false, required: true },
+  isBlocked: { type: Boolean, default: false, required: true },
+  blockedReason: { type: String },
+  blockedAt: { type: Date }
+}, {
+  timestamps: true
 });
 
-// Mining Plans table
-export const miningPlans = pgTable('mining_plans', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(),
-  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
-  miningRate: decimal('mining_rate', { precision: 10, scale: 8 }).notNull(), // MH/s
-  dailyEarnings: decimal('daily_earnings', { precision: 10, scale: 8 }).notNull(), // BTC
-  monthlyRoi: decimal('monthly_roi', { precision: 5, scale: 2 }).notNull(), // percentage
-  contractPeriod: integer('contract_period').notNull(), // months
-  isActive: boolean('is_active').default(true).notNull(),
-  description: text('description').notNull(),
-  features: text('features').array(), // JSON array of features
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Mining Plan interface
+export interface IMiningPlan extends Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  price: number;
+  miningRate: number; // MH/s
+  dailyEarnings: number; // BTC
+  monthlyRoi: number; // percentage
+  contractPeriod: number; // months
+  isActive: boolean;
+  description: string;
+  features: string[]; // Array of features
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Mining Plan schema
+const miningPlanSchema = new Schema<IMiningPlan>({
+  name: { type: String, required: true, maxlength: 255 },
+  price: { type: Number, required: true },
+  miningRate: { type: Number, required: true }, // MH/s
+  dailyEarnings: { type: Number, required: true }, // BTC
+  monthlyRoi: { type: Number, required: true }, // percentage
+  contractPeriod: { type: Number, required: true }, // months
+  isActive: { type: Boolean, default: true, required: true },
+  description: { type: String, required: true },
+  features: [{ type: String }] // Array of features
+}, {
+  timestamps: true
 });
 
-// Transactions table
-export const transactions = pgTable('transactions', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').notNull(),
-  planId: integer('plan_id').notNull(),
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
-  currency: varchar('currency', { length: 10 }).notNull(),
-  cryptoAmount: decimal('crypto_amount', { precision: 20, scale: 8 }).notNull(),
-  walletAddress: varchar('wallet_address', { length: 255 }).notNull(),
-  transactionHash: varchar('transaction_hash', { length: 255 }),
-  status: transactionStatusEnum('status').default('pending').notNull(),
-  approvedBy: integer('approved_by'),
-  approvedAt: timestamp('approved_at'),
-  rejectionReason: text('rejection_reason'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Transaction interface
+export interface ITransaction extends Document {
+  _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  planId: mongoose.Types.ObjectId;
+  amount: number;
+  currency: string;
+  cryptoAmount: number;
+  walletAddress: string;
+  transactionHash?: string;
+  status: typeof transactionStatusValues[number];
+  approvedBy?: mongoose.Types.ObjectId;
+  approvedAt?: Date;
+  rejectionReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Transaction schema
+const transactionSchema = new Schema<ITransaction>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  planId: { type: Schema.Types.ObjectId, ref: 'MiningPlan', required: true },
+  amount: { type: Number, required: true },
+  currency: { type: String, required: true, maxlength: 10 },
+  cryptoAmount: { type: Number, required: true },
+  walletAddress: { type: String, required: true, maxlength: 255 },
+  transactionHash: { type: String, maxlength: 255 },
+  status: { type: String, enum: transactionStatusValues, default: 'pending', required: true },
+  approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: { type: Date },
+  rejectionReason: { type: String }
+}, {
+  timestamps: true
 });
 
-// Mining Contracts table
-export const miningContracts = pgTable('mining_contracts', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').notNull(),
-  planId: integer('plan_id').notNull(),
-  transactionId: integer('transaction_id').notNull(),
-  startDate: timestamp('start_date').notNull(),
-  endDate: timestamp('end_date').notNull(),
-  isActive: boolean('is_active').default(true).notNull(),
-  totalEarnings: decimal('total_earnings', { precision: 20, scale: 8 }).default('0').notNull(),
-  lastPayoutAt: timestamp('last_payout_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Mining Contract interface
+export interface IMiningContract extends Document {
+  _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  planId: mongoose.Types.ObjectId;
+  transactionId: mongoose.Types.ObjectId;
+  startDate: Date;
+  endDate: Date;
+  isActive: boolean;
+  totalEarnings: number;
+  lastPayoutAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Mining Contract schema
+const miningContractSchema = new Schema<IMiningContract>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  planId: { type: Schema.Types.ObjectId, ref: 'MiningPlan', required: true },
+  transactionId: { type: Schema.Types.ObjectId, ref: 'Transaction', required: true },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  isActive: { type: Boolean, default: true, required: true },
+  totalEarnings: { type: Number, default: 0, required: true },
+  lastPayoutAt: { type: Date }
+}, {
+  timestamps: true
 });
 
-// Mining Earnings table
-export const miningEarnings = pgTable('mining_earnings', {
-  id: serial('id').primaryKey(),
-  contractId: integer('contract_id').notNull(),
-  userId: integer('user_id').notNull(),
-  date: timestamp('date').notNull(),
-  amount: decimal('amount', { precision: 20, scale: 8 }).notNull(), // BTC
-  usdValue: decimal('usd_value', { precision: 10, scale: 2 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+// Mining Earning interface
+export interface IMiningEarning extends Document {
+  _id: mongoose.Types.ObjectId;
+  contractId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  date: Date;
+  amount: number; // BTC
+  usdValue: number;
+  createdAt: Date;
+}
+
+// Mining Earning schema
+const miningEarningSchema = new Schema<IMiningEarning>({
+  contractId: { type: Schema.Types.ObjectId, ref: 'MiningContract', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  date: { type: Date, required: true },
+  amount: { type: Number, required: true }, // BTC
+  usdValue: { type: Number, required: true }
+}, {
+  timestamps: { createdAt: true, updatedAt: false }
 });
 
-// Withdrawals table
-export const withdrawals = pgTable('withdrawals', {
-  id: serial('id').primaryKey(),
-  withdrawalId: varchar('withdrawal_id', { length: 20 }).unique(), // Auto-generated like "WD001234"
-  userId: integer('user_id').notNull(),
-  currency: varchar('currency', { length: 10 }).notNull(),
-  amount: decimal('amount', { precision: 20, scale: 8 }).notNull(),
-  walletAddress: varchar('wallet_address', { length: 255 }).notNull(),
-  status: withdrawalStatusEnum('status').default('pending').notNull(),
-  transactionHash: varchar('transaction_hash', { length: 255 }),
-  networkFee: decimal('network_fee', { precision: 20, scale: 8 }).default('0'),
-  rejectionReason: text('rejection_reason'),
-  processedAt: timestamp('processed_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Withdrawal interface
+export interface IWithdrawal extends Document {
+  _id: mongoose.Types.ObjectId;
+  withdrawalId: string; // Auto-generated like "WD001234"
+  userId: mongoose.Types.ObjectId;
+  currency: string;
+  amount: number;
+  walletAddress: string;
+  status: typeof withdrawalStatusValues[number];
+  transactionHash?: string;
+  networkFee: number;
+  rejectionReason?: string;
+  processedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Withdrawal schema
+const withdrawalSchema = new Schema<IWithdrawal>({
+  withdrawalId: { type: String, unique: true, maxlength: 20 },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  currency: { type: String, required: true, maxlength: 10 },
+  amount: { type: Number, required: true },
+  walletAddress: { type: String, required: true, maxlength: 255 },
+  status: { type: String, enum: withdrawalStatusValues, default: 'pending', required: true },
+  transactionHash: { type: String, maxlength: 255 },
+  networkFee: { type: Number, default: 0 },
+  rejectionReason: { type: String },
+  processedAt: { type: Date }
+}, {
+  timestamps: true
 });
 
-// Crypto Prices table
-export const cryptoPrices = pgTable('crypto_prices', {
-  id: serial('id').primaryKey(),
-  symbol: varchar('symbol', { length: 10 }).notNull().unique(),
-  name: varchar('name', { length: 100 }).notNull(),
-  price: decimal('price', { precision: 20, scale: 8 }).notNull(),
-  change1h: decimal('change_1h', { precision: 5, scale: 2 }),
-  change24h: decimal('change_24h', { precision: 5, scale: 2 }),
-  change7d: decimal('change_7d', { precision: 5, scale: 2 }),
-  marketCap: decimal('market_cap', { precision: 20, scale: 2 }),
-  volume24h: decimal('volume_24h', { precision: 20, scale: 2 }),
-  circulatingSupply: decimal('circulating_supply', { precision: 20, scale: 2 }),
-  logoUrl: varchar('logo_url', { length: 500 }),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Crypto Price interface
+export interface ICryptoPrice extends Document {
+  _id: mongoose.Types.ObjectId;
+  symbol: string;
+  name: string;
+  price: number;
+  change1h?: number;
+  change24h?: number;
+  change7d?: number;
+  marketCap?: number;
+  volume24h?: number;
+  circulatingSupply?: number;
+  logoUrl?: string;
+  updatedAt: Date;
+}
+
+// Crypto Price schema
+const cryptoPriceSchema = new Schema<ICryptoPrice>({
+  symbol: { type: String, required: true, unique: true, maxlength: 10 },
+  name: { type: String, required: true, maxlength: 100 },
+  price: { type: Number, required: true },
+  change1h: { type: Number },
+  change24h: { type: Number },
+  change7d: { type: Number },
+  marketCap: { type: Number },
+  volume24h: { type: Number },
+  circulatingSupply: { type: Number },
+  logoUrl: { type: String, maxlength: 500 }
+}, {
+  timestamps: { createdAt: false, updatedAt: true }
 });
 
-// Announcements table (for admin ads/promotions)
-export const announcements = pgTable('announcements', {
-  id: serial('id').primaryKey(),
-  title: varchar('title', { length: 255 }).notNull(),
-  content: text('content').notNull(),
-  type: varchar('type', { length: 20 }).default('promotion').notNull(), // promotion, announcement, warning
-  isActive: boolean('is_active').default(true).notNull(),
-  createdBy: integer('created_by').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Announcement interface
+export interface IAnnouncement extends Document {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  content: string;
+  type: string; // promotion, announcement, warning
+  isActive: boolean;
+  createdBy: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Announcement schema
+const announcementSchema = new Schema<IAnnouncement>({
+  title: { type: String, required: true, maxlength: 255 },
+  content: { type: String, required: true },
+  type: { type: String, default: 'promotion', required: true, maxlength: 20 },
+  isActive: { type: Boolean, default: true, required: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+}, {
+  timestamps: true
 });
 
-// Support Tickets table
-export const supportTickets = pgTable('support_tickets', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').notNull(),
-  subject: varchar('subject', { length: 255 }).notNull(),
-  description: text('description').notNull(),
-  status: ticketStatusEnum('status').default('open').notNull(),
-  priority: ticketPriorityEnum('priority').default('medium').notNull(),
-  category: varchar('category', { length: 100 }).notNull(), // 'technical', 'payment', 'account', 'general'
-  assignedTo: integer('assigned_to'), // admin user ID
-  assignedAt: timestamp('assigned_at'),
-  resolvedAt: timestamp('resolved_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Support Ticket interface
+export interface ISupportTicket extends Document {
+  _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  subject: string;
+  description: string;
+  status: typeof ticketStatusValues[number];
+  priority: typeof ticketPriorityValues[number];
+  category: string; // 'technical', 'payment', 'account', 'general'
+  assignedTo?: mongoose.Types.ObjectId;
+  assignedAt?: Date;
+  resolvedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Support Ticket schema
+const supportTicketSchema = new Schema<ISupportTicket>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  subject: { type: String, required: true, maxlength: 255 },
+  description: { type: String, required: true },
+  status: { type: String, enum: ticketStatusValues, default: 'open', required: true },
+  priority: { type: String, enum: ticketPriorityValues, default: 'medium', required: true },
+  category: { type: String, required: true, maxlength: 100 },
+  assignedTo: { type: Schema.Types.ObjectId, ref: 'User' },
+  assignedAt: { type: Date },
+  resolvedAt: { type: Date }
+}, {
+  timestamps: true
 });
 
-// Support Ticket Messages table
-export const supportTicketMessages = pgTable('support_ticket_messages', {
-  id: serial('id').primaryKey(),
-  ticketId: integer('ticket_id').notNull(),
-  userId: integer('user_id').notNull(),
-  message: text('message').notNull(),
-  isFromAdmin: boolean('is_from_admin').default(false).notNull(),
-  attachments: text('attachments').array(), // Array of file URLs
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+// Support Ticket Message interface
+export interface ISupportTicketMessage extends Document {
+  _id: mongoose.Types.ObjectId;
+  ticketId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  message: string;
+  isFromAdmin: boolean;
+  attachments: string[]; // Array of file URLs
+  createdAt: Date;
+}
+
+// Support Ticket Message schema
+const supportTicketMessageSchema = new Schema<ISupportTicketMessage>({
+  ticketId: { type: Schema.Types.ObjectId, ref: 'SupportTicket', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  message: { type: String, required: true },
+  isFromAdmin: { type: Boolean, default: false, required: true },
+  attachments: [{ type: String }] // Array of file URLs
+}, {
+  timestamps: { createdAt: true, updatedAt: false }
 });
+
+// Create models
+export const User = mongoose.model<IUser>('User', userSchema);
+export const MiningPlan = mongoose.model<IMiningPlan>('MiningPlan', miningPlanSchema);
+export const Transaction = mongoose.model<ITransaction>('Transaction', transactionSchema);
+export const MiningContract = mongoose.model<IMiningContract>('MiningContract', miningContractSchema);
+export const MiningEarning = mongoose.model<IMiningEarning>('MiningEarning', miningEarningSchema);
+export const Withdrawal = mongoose.model<IWithdrawal>('Withdrawal', withdrawalSchema);
+export const CryptoPrice = mongoose.model<ICryptoPrice>('CryptoPrice', cryptoPriceSchema);
+export const Announcement = mongoose.model<IAnnouncement>('Announcement', announcementSchema);
+export const SupportTicket = mongoose.model<ISupportTicket>('SupportTicket', supportTicketSchema);
+export const SupportTicketMessage = mongoose.model<ISupportTicketMessage>('SupportTicketMessage', supportTicketMessageSchema);
 
 // Zod schemas for validation
-export const createUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  isAdmin: true,
-  isEmailVerified: true,
+export const createUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6).optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  profileImageUrl: z.string().optional(),
+  googleId: z.string().optional(),
+  customUserId: z.string().optional(),
+  isBlocked: z.boolean().optional(),
+  blockedReason: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -181,7 +340,7 @@ export const registerSchema = z.object({
 });
 
 export const createTransactionSchema = z.object({
-  planId: z.number(),
+  planId: z.string(), // MongoDB ObjectId as string
   currency: z.string(),
   cryptoAmount: z.number().positive(),
   walletAddress: z.string().min(1),
@@ -209,7 +368,7 @@ export const createSupportTicketSchema = z.object({
 });
 
 export const createTicketMessageSchema = z.object({
-  ticketId: z.number(),
+  ticketId: z.string(), // MongoDB ObjectId as string
   message: z.string().min(1, "Message is required"),
   attachments: z.array(z.string()).optional(),
 });
@@ -217,30 +376,30 @@ export const createTicketMessageSchema = z.object({
 export const updateTicketSchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'closed']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  assignedTo: z.number().optional(),
+  assignedTo: z.string().optional(), // MongoDB ObjectId as string
 });
 
-// Type definitions
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-export type MiningPlan = typeof miningPlans.$inferSelect;
-export type NewMiningPlan = typeof miningPlans.$inferInsert;
-export type Transaction = typeof transactions.$inferSelect;
-export type NewTransaction = typeof transactions.$inferInsert;
-export type MiningContract = typeof miningContracts.$inferSelect;
-export type NewMiningContract = typeof miningContracts.$inferInsert;
-export type MiningEarning = typeof miningEarnings.$inferSelect;
-export type NewMiningEarning = typeof miningEarnings.$inferInsert;
-export type Withdrawal = typeof withdrawals.$inferSelect;
-export type NewWithdrawal = typeof withdrawals.$inferInsert;
-export type CryptoPrice = typeof cryptoPrices.$inferSelect;
-export type NewCryptoPrice = typeof cryptoPrices.$inferInsert;
-export type Announcement = typeof announcements.$inferSelect;
-export type NewAnnouncement = typeof announcements.$inferInsert;
-export type SupportTicket = typeof supportTickets.$inferSelect;
-export type NewSupportTicket = typeof supportTickets.$inferInsert;
-export type SupportTicketMessage = typeof supportTicketMessages.$inferSelect;
-export type NewSupportTicketMessage = typeof supportTicketMessages.$inferInsert;
+// Type definitions (using interface names for MongoDB documents)
+export type UserType = IUser;
+export type NewUser = Partial<IUser>;
+export type MiningPlanType = IMiningPlan;
+export type NewMiningPlan = Partial<IMiningPlan>;
+export type TransactionType = ITransaction;
+export type NewTransaction = Partial<ITransaction>;
+export type MiningContractType = IMiningContract;
+export type NewMiningContract = Partial<IMiningContract>;
+export type MiningEarningType = IMiningEarning;
+export type NewMiningEarning = Partial<IMiningEarning>;
+export type WithdrawalType = IWithdrawal;
+export type NewWithdrawal = Partial<IWithdrawal>;
+export type CryptoPriceType = ICryptoPrice;
+export type NewCryptoPrice = Partial<ICryptoPrice>;
+export type AnnouncementType = IAnnouncement;
+export type NewAnnouncement = Partial<IAnnouncement>;
+export type SupportTicketType = ISupportTicket;
+export type NewSupportTicket = Partial<ISupportTicket>;
+export type SupportTicketMessageType = ISupportTicketMessage;
+export type NewSupportTicketMessage = Partial<ISupportTicketMessage>;
 
 export type LoginData = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

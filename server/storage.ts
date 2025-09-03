@@ -1,25 +1,25 @@
-import db from './db';
+import mongoose from 'mongoose';
 import {
-  users,
-  miningPlans,
-  transactions,
-  miningContracts,
-  miningEarnings,
-  withdrawals,
-  cryptoPrices,
-  announcements,
-  supportTickets,
-  supportTicketMessages,
-  type User,
-  type MiningPlan,
-  type Transaction,
-  type MiningContract,
-  type MiningEarning,
-  type Withdrawal,
-  type CryptoPrice,
-  type Announcement,
-  type SupportTicket,
-  type SupportTicketMessage,
+  User,
+  MiningPlan,
+  Transaction,
+  MiningContract,
+  MiningEarning,
+  Withdrawal,
+  CryptoPrice,
+  Announcement,
+  SupportTicket,
+  SupportTicketMessage,
+  type UserType,
+  type MiningPlanType,
+  type TransactionType,
+  type MiningContractType,
+  type MiningEarningType,
+  type WithdrawalType,
+  type CryptoPriceType,
+  type AnnouncementType,
+  type SupportTicketType,
+  type SupportTicketMessageType,
   type NewUser,
   type NewMiningPlan,
   type NewTransaction,
@@ -37,387 +37,595 @@ import {
   type CreateTicketMessageData,
   type UpdateTicketData,
 } from "@shared/schema";
-import { eq, desc, and, sql, sum } from 'drizzle-orm';
 
 export interface IStorage {
   // User operations
-  getUser(id: number): Promise<User | null>;
-  getUserByEmail(email: string): Promise<User | null>;
-  getUserByGoogleId(googleId: string): Promise<User | null>;
-  createUser(user: Partial<NewUser>): Promise<User>;
-  updateUser(id: number, updates: Partial<User>): Promise<User | null>;
+  getUser(id: string): Promise<UserType | null>;
+  getUserByEmail(email: string): Promise<UserType | null>;
+  getUserByGoogleId(googleId: string): Promise<UserType | null>;
+  createUser(user: Partial<NewUser>): Promise<UserType>;
+  updateUser(id: string, updates: Partial<UserType>): Promise<UserType | null>;
   getTotalUsers(): Promise<number>;
-  getAllUsers(): Promise<User[]>;
-  getBlockedUsers(): Promise<User[]>;
-  blockUser(id: number, reason: string, blockedBy: number): Promise<User | null>;
-  unblockUser(id: number, unblockedBy: number): Promise<User | null>;
+  getAllUsers(): Promise<UserType[]>;
+  getBlockedUsers(): Promise<UserType[]>;
+  blockUser(id: string, reason: string, blockedBy: string): Promise<UserType | null>;
+  unblockUser(id: string, unblockedBy: string): Promise<UserType | null>;
   generateCustomUserId(): Promise<string>;
   generateWithdrawalId(): Promise<string>;
   
   // Mining plans
-  getMiningPlans(): Promise<MiningPlan[]>;
-  getMiningPlan(id: number): Promise<MiningPlan | null>;
-  createMiningPlan(plan: NewMiningPlan): Promise<MiningPlan>;
-  updateMiningPlan(id: number, updates: Partial<MiningPlan>): Promise<MiningPlan | null>;
+  getMiningPlans(): Promise<MiningPlanType[]>;
+  getMiningPlan(id: string): Promise<MiningPlanType | null>;
+  createMiningPlan(plan: NewMiningPlan): Promise<MiningPlanType>;
+  updateMiningPlan(id: string, updates: Partial<MiningPlanType>): Promise<MiningPlanType | null>;
   
   // Transactions
-  createTransaction(transaction: CreateTransactionData & { userId: number; amount: number }): Promise<Transaction>;
-  getTransaction(id: number): Promise<Transaction | null>;
-  getUserTransactions(userId: number): Promise<Transaction[]>;
-  getPendingTransactions(): Promise<Transaction[]>;
-  getAllTransactions(): Promise<Transaction[]>;
-  approveTransaction(id: number, approvedBy: number): Promise<Transaction | null>;
-  rejectTransaction(id: number, approvedBy: number, reason: string): Promise<Transaction | null>;
+  createTransaction(transaction: CreateTransactionData & { userId: string; amount: number }): Promise<TransactionType>;
+  getTransaction(id: string): Promise<TransactionType | null>;
+  getUserTransactions(userId: string): Promise<TransactionType[]>;
+  getPendingTransactions(): Promise<TransactionType[]>;
+  getAllTransactions(): Promise<TransactionType[]>;
+  approveTransaction(id: string, approvedBy: string): Promise<TransactionType | null>;
+  rejectTransaction(id: string, approvedBy: string, reason: string): Promise<TransactionType | null>;
   
   // Mining contracts
-  createMiningContract(contract: NewMiningContract): Promise<MiningContract>;
-  getUserMiningContracts(userId: number): Promise<MiningContract[]>;
-  getActiveMiningContracts(): Promise<MiningContract[]>;
+  createMiningContract(contract: NewMiningContract): Promise<MiningContractType>;
+  getUserMiningContracts(userId: string): Promise<MiningContractType[]>;
+  getActiveMiningContracts(): Promise<MiningContractType[]>;
   
   // Mining earnings
-  createMiningEarning(earning: NewMiningEarning): Promise<MiningEarning>;
-  getUserEarnings(userId: number): Promise<MiningEarning[]>;
-  getUserTotalEarnings(userId: number): Promise<{ totalBtc: number; totalUsd: number }>;
+  createMiningEarning(earning: NewMiningEarning): Promise<MiningEarningType>;
+  getUserEarnings(userId: string, limit?: number): Promise<MiningEarningType[]>;
+  getUserTotalEarnings(userId: string): Promise<{ totalBtc: number; totalUsd: number }>;
   
   // Withdrawals
-  createWithdrawal(withdrawal: CreateWithdrawalData & { userId: number }): Promise<Withdrawal>;
-  getUserWithdrawals(userId: number): Promise<Withdrawal[]>;
-  getPendingWithdrawals(): Promise<Withdrawal[]>;
-  getAllWithdrawals(): Promise<Withdrawal[]>;
-  updateWithdrawal(id: number, updates: Partial<Withdrawal>): Promise<Withdrawal | null>;
+  createWithdrawal(withdrawal: CreateWithdrawalData & { userId: string }): Promise<WithdrawalType>;
+  getUserWithdrawals(userId: string): Promise<WithdrawalType[]>;
+  getPendingWithdrawals(): Promise<WithdrawalType[]>;
+  getAllWithdrawals(): Promise<WithdrawalType[]>;
+  updateWithdrawal(id: string, updates: Partial<WithdrawalType>): Promise<WithdrawalType | null>;
   
   // Crypto prices
-  upsertCryptoPrice(price: NewCryptoPrice): Promise<CryptoPrice>;
-  getCryptoPrices(): Promise<CryptoPrice[]>;
-  getCryptoPrice(symbol: string): Promise<CryptoPrice | null>;
+  upsertCryptoPrice(price: NewCryptoPrice): Promise<CryptoPriceType>;
+  getCryptoPrices(): Promise<CryptoPriceType[]>;
+  getCryptoPrice(symbol: string): Promise<CryptoPriceType | null>;
   
   // Announcements
-  createAnnouncement(announcement: CreateAnnouncementData & { createdBy: number }): Promise<Announcement>;
-  getActiveAnnouncements(): Promise<Announcement[]>;
-  getAllAnnouncements(): Promise<Announcement[]>;
-  updateAnnouncement(id: number, updates: Partial<Announcement>): Promise<Announcement | null>;
-  deleteAnnouncement(id: number): Promise<boolean>;
+  createAnnouncement(announcement: CreateAnnouncementData & { createdBy: string }): Promise<AnnouncementType>;
+  getActiveAnnouncements(): Promise<AnnouncementType[]>;
+  getAllAnnouncements(): Promise<AnnouncementType[]>;
+  updateAnnouncement(id: string, updates: Partial<AnnouncementType>): Promise<AnnouncementType | null>;
+  deleteAnnouncement(id: string): Promise<boolean>;
   
   // Support Tickets
-  createSupportTicket(ticket: CreateSupportTicketData & { userId: number }): Promise<SupportTicket>;
-  getSupportTicket(id: number): Promise<SupportTicket | null>;
-  getUserSupportTickets(userId: number): Promise<SupportTicket[]>;
-  getAllSupportTickets(): Promise<SupportTicket[]>;
-  updateSupportTicket(id: number, updates: UpdateTicketData): Promise<SupportTicket | null>;
+  createSupportTicket(ticket: CreateSupportTicketData & { userId: string }): Promise<SupportTicketType>;
+  getSupportTicket(id: string): Promise<SupportTicketType | null>;
+  getUserSupportTickets(userId: string): Promise<SupportTicketType[]>;
+  getAllSupportTickets(): Promise<SupportTicketType[]>;
+  updateSupportTicket(id: string, updates: UpdateTicketData): Promise<SupportTicketType | null>;
   
   // Support Ticket Messages
-  createTicketMessage(message: CreateTicketMessageData & { userId: number; isFromAdmin: boolean }): Promise<SupportTicketMessage>;
-  getTicketMessages(ticketId: number): Promise<SupportTicketMessage[]>;
+  createTicketMessage(message: CreateTicketMessageData & { userId: string; isFromAdmin: boolean }): Promise<SupportTicketMessageType>;
+  getTicketMessages(ticketId: string): Promise<SupportTicketMessageType[]>;
 }
 
-export class PostgresStorage implements IStorage {
+export class MongoStorage implements IStorage {
   // User operations
-  async getUser(id: number): Promise<User | null> {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0] || null;
+  async getUser(id: string): Promise<UserType | null> {
+    try {
+      return await User.findById(id);
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return null;
+    }
   }
 
-  async getUserByEmail(email: string): Promise<User | null> {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    return result[0] || null;
+  async getUserByEmail(email: string): Promise<UserType | null> {
+    try {
+      return await User.findOne({ email });
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      return null;
+    }
   }
 
-  async getUserByGoogleId(googleId: string): Promise<User | null> {
-    const result = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
-    return result[0] || null;
+  async getUserByGoogleId(googleId: string): Promise<UserType | null> {
+    try {
+      return await User.findOne({ googleId });
+    } catch (error) {
+      console.error('Error getting user by Google ID:', error);
+      return null;
+    }
   }
 
-  async createUser(userData: Partial<NewUser>): Promise<User> {
-    const result = await db.insert(users).values(userData as NewUser).returning();
-    return result[0];
+  async createUser(userData: Partial<NewUser>): Promise<UserType> {
+    try {
+      const user = new User(userData);
+      return await user.save();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   }
 
-  async updateUser(id: number, updates: Partial<User>): Promise<User | null> {
-    const result = await db.update(users).set({...updates, updatedAt: sql`NOW()`}).where(eq(users.id, id)).returning();
-    return result[0] || null;
+  async updateUser(id: string, updates: Partial<UserType>): Promise<UserType | null> {
+    try {
+      return await User.findByIdAndUpdate(id, updates, { new: true });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return null;
+    }
   }
 
   async getTotalUsers(): Promise<number> {
-    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
-    return result[0].count;
+    try {
+      return await User.countDocuments();
+    } catch (error) {
+      console.error('Error getting total users:', error);
+      return 0;
+    }
   }
 
-  async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users).orderBy(desc(users.createdAt));
+  async getAllUsers(): Promise<UserType[]> {
+    try {
+      return await User.find().sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
   }
 
-  async getBlockedUsers(): Promise<User[]> {
-    return await db.select().from(users).where(eq(users.isBlocked, true));
+  async getBlockedUsers(): Promise<UserType[]> {
+    try {
+      return await User.find({ isBlocked: true });
+    } catch (error) {
+      console.error('Error getting blocked users:', error);
+      return [];
+    }
   }
 
-  async blockUser(id: number, reason: string, blockedBy: number): Promise<User | null> {
-    const result = await db.update(users).set({
-      isBlocked: true,
-      blockedReason: reason,
-      blockedAt: sql`NOW()`,
-      updatedAt: sql`NOW()`
-    }).where(eq(users.id, id)).returning();
-    return result[0] || null;
+  async blockUser(id: string, reason: string, blockedBy: string): Promise<UserType | null> {
+    try {
+      return await User.findByIdAndUpdate(id, {
+        isBlocked: true,
+        blockedReason: reason,
+        blockedAt: new Date()
+      }, { new: true });
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      return null;
+    }
   }
 
-  async unblockUser(id: number, unblockedBy: number): Promise<User | null> {
-    const result = await db.update(users).set({
-      isBlocked: false,
-      blockedReason: null,
-      blockedAt: null,
-      updatedAt: sql`NOW()`
-    }).where(eq(users.id, id)).returning();
-    return result[0] || null;
+  async unblockUser(id: string, unblockedBy: string): Promise<UserType | null> {
+    try {
+      return await User.findByIdAndUpdate(id, {
+        isBlocked: false,
+        blockedReason: undefined,
+        blockedAt: undefined
+      }, { new: true });
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      return null;
+    }
   }
 
   async generateCustomUserId(): Promise<string> {
-    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
-    const userCount = result[0].count;
-    return `USER${String(userCount + 1).padStart(4, '0')}`;
+    try {
+      const userCount = await User.countDocuments();
+      return `USER${String(userCount + 1).padStart(4, '0')}`;
+    } catch (error) {
+      console.error('Error generating custom user ID:', error);
+      return `USER${String(Date.now()).slice(-4)}`;
+    }
   }
 
   async generateWithdrawalId(): Promise<string> {
-    const result = await db.select({ count: sql<number>`count(*)` }).from(withdrawals);
-    const withdrawalCount = result[0].count;
-    return `WD${String(withdrawalCount + 1).padStart(6, '0')}`;
+    try {
+      const withdrawalCount = await Withdrawal.countDocuments();
+      return `WD${String(withdrawalCount + 1).padStart(6, '0')}`;
+    } catch (error) {
+      console.error('Error generating withdrawal ID:', error);
+      return `WD${String(Date.now()).slice(-6)}`;
+    }
   }
 
   // Mining plans
-  async getMiningPlans(): Promise<MiningPlan[]> {
-    return await db.select().from(miningPlans).where(eq(miningPlans.isActive, true)).orderBy(miningPlans.price);
+  async getMiningPlans(): Promise<MiningPlanType[]> {
+    try {
+      return await MiningPlan.find({ isActive: true }).sort({ price: 1 });
+    } catch (error) {
+      console.error('Error getting mining plans:', error);
+      return [];
+    }
   }
 
-  async getMiningPlan(id: number): Promise<MiningPlan | null> {
-    const result = await db.select().from(miningPlans).where(eq(miningPlans.id, id)).limit(1);
-    return result[0] || null;
+  async getMiningPlan(id: string): Promise<MiningPlanType | null> {
+    try {
+      return await MiningPlan.findById(id);
+    } catch (error) {
+      console.error('Error getting mining plan:', error);
+      return null;
+    }
   }
 
-  async createMiningPlan(planData: NewMiningPlan): Promise<MiningPlan> {
-    const result = await db.insert(miningPlans).values(planData).returning();
-    return result[0];
+  async createMiningPlan(planData: NewMiningPlan): Promise<MiningPlanType> {
+    try {
+      const plan = new MiningPlan(planData);
+      return await plan.save();
+    } catch (error) {
+      console.error('Error creating mining plan:', error);
+      throw error;
+    }
   }
 
-  async updateMiningPlan(id: number, updates: Partial<MiningPlan>): Promise<MiningPlan | null> {
-    const result = await db.update(miningPlans).set({...updates, updatedAt: sql`NOW()`}).where(eq(miningPlans.id, id)).returning();
-    return result[0] || null;
+  async updateMiningPlan(id: string, updates: Partial<MiningPlanType>): Promise<MiningPlanType | null> {
+    try {
+      return await MiningPlan.findByIdAndUpdate(id, updates, { new: true });
+    } catch (error) {
+      console.error('Error updating mining plan:', error);
+      return null;
+    }
   }
 
   // Transactions
-  async createTransaction(transactionData: CreateTransactionData & { userId: number; amount: number }): Promise<Transaction> {
-    const insertData = {
-      ...transactionData,
-      amount: transactionData.amount.toString(),
-      cryptoAmount: transactionData.cryptoAmount.toString()
-    };
-    const result = await db.insert(transactions).values(insertData as any).returning();
-    return result[0];
+  async createTransaction(transactionData: CreateTransactionData & { userId: string; amount: number }): Promise<TransactionType> {
+    try {
+      const transaction = new Transaction(transactionData);
+      return await transaction.save();
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      throw error;
+    }
   }
 
-  async getTransaction(id: number): Promise<Transaction | null> {
-    const result = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1);
-    return result[0] || null;
+  async getTransaction(id: string): Promise<TransactionType | null> {
+    try {
+      return await Transaction.findById(id);
+    } catch (error) {
+      console.error('Error getting transaction:', error);
+      return null;
+    }
   }
 
-  async getUserTransactions(userId: number): Promise<Transaction[]> {
-    return await db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.createdAt));
+  async getUserTransactions(userId: string): Promise<TransactionType[]> {
+    try {
+      return await Transaction.find({ userId }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting user transactions:', error);
+      return [];
+    }
   }
 
-  async getPendingTransactions(): Promise<Transaction[]> {
-    return await db.select().from(transactions).where(eq(transactions.status, 'pending')).orderBy(desc(transactions.createdAt));
+  async getPendingTransactions(): Promise<TransactionType[]> {
+    try {
+      return await Transaction.find({ status: 'pending' }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting pending transactions:', error);
+      return [];
+    }
   }
 
-  async getAllTransactions(): Promise<Transaction[]> {
-    return await db.select().from(transactions).orderBy(desc(transactions.createdAt));
+  async getAllTransactions(): Promise<TransactionType[]> {
+    try {
+      return await Transaction.find().sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting all transactions:', error);
+      return [];
+    }
   }
 
-  async approveTransaction(id: number, approvedBy: number): Promise<Transaction | null> {
-    const result = await db.update(transactions).set({
-      status: 'approved',
-      approvedBy,
-      approvedAt: sql`NOW()`,
-      updatedAt: sql`NOW()`
-    }).where(eq(transactions.id, id)).returning();
-    return result[0] || null;
+  async approveTransaction(id: string, approvedBy: string): Promise<TransactionType | null> {
+    try {
+      return await Transaction.findByIdAndUpdate(id, {
+        status: 'approved',
+        approvedBy: new mongoose.Types.ObjectId(approvedBy),
+        approvedAt: new Date()
+      }, { new: true });
+    } catch (error) {
+      console.error('Error approving transaction:', error);
+      return null;
+    }
   }
 
-  async rejectTransaction(id: number, approvedBy: number, reason: string): Promise<Transaction | null> {
-    const result = await db.update(transactions).set({
-      status: 'rejected',
-      approvedBy,
-      rejectionReason: reason,
-      updatedAt: sql`NOW()`
-    }).where(eq(transactions.id, id)).returning();
-    return result[0] || null;
+  async rejectTransaction(id: string, approvedBy: string, reason: string): Promise<TransactionType | null> {
+    try {
+      return await Transaction.findByIdAndUpdate(id, {
+        status: 'rejected',
+        approvedBy: new mongoose.Types.ObjectId(approvedBy),
+        rejectionReason: reason
+      }, { new: true });
+    } catch (error) {
+      console.error('Error rejecting transaction:', error);
+      return null;
+    }
   }
 
   // Mining contracts
-  async createMiningContract(contractData: NewMiningContract): Promise<MiningContract> {
-    const result = await db.insert(miningContracts).values(contractData).returning();
-    return result[0];
+  async createMiningContract(contractData: NewMiningContract): Promise<MiningContractType> {
+    try {
+      const contract = new MiningContract(contractData);
+      return await contract.save();
+    } catch (error) {
+      console.error('Error creating mining contract:', error);
+      throw error;
+    }
   }
 
-  async getUserMiningContracts(userId: number): Promise<MiningContract[]> {
-    return await db.select().from(miningContracts).where(eq(miningContracts.userId, userId)).orderBy(desc(miningContracts.createdAt));
+  async getUserMiningContracts(userId: string): Promise<MiningContractType[]> {
+    try {
+      return await MiningContract.find({ userId }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting user mining contracts:', error);
+      return [];
+    }
   }
 
-  async getActiveMiningContracts(): Promise<MiningContract[]> {
-    return await db.select().from(miningContracts).where(
-      and(
-        eq(miningContracts.isActive, true),
-        sql`${miningContracts.endDate} >= NOW()`
-      )
-    );
+  async getActiveMiningContracts(): Promise<MiningContractType[]> {
+    try {
+      return await MiningContract.find({
+        isActive: true,
+        endDate: { $gte: new Date() }
+      });
+    } catch (error) {
+      console.error('Error getting active mining contracts:', error);
+      return [];
+    }
   }
 
   // Mining earnings
-  async createMiningEarning(earningData: NewMiningEarning): Promise<MiningEarning> {
-    const result = await db.insert(miningEarnings).values(earningData).returning();
-    return result[0];
-  }
-
-  async getUserEarnings(userId: number, limit?: number): Promise<MiningEarning[]> {
-    const query = db.select().from(miningEarnings).where(eq(miningEarnings.userId, userId)).orderBy(desc(miningEarnings.date));
-    
-    if (limit) {
-      query.limit(limit);
+  async createMiningEarning(earningData: NewMiningEarning): Promise<MiningEarningType> {
+    try {
+      const earning = new MiningEarning(earningData);
+      return await earning.save();
+    } catch (error) {
+      console.error('Error creating mining earning:', error);
+      throw error;
     }
-    
-    return await query;
   }
 
-  async getUserTotalEarnings(userId: number): Promise<{ totalBtc: number; totalUsd: number }> {
-    const result = await db
-      .select({
-        totalBtc: sql<number>`COALESCE(SUM(${miningEarnings.amount}), 0)`,
-        totalUsd: sql<number>`COALESCE(SUM(${miningEarnings.usdValue}), 0)`
-      })
-      .from(miningEarnings)
-      .where(eq(miningEarnings.userId, userId));
+  async getUserEarnings(userId: string, limit?: number): Promise<MiningEarningType[]> {
+    try {
+      const query = MiningEarning.find({ userId }).sort({ date: -1 });
+      
+      if (limit) {
+        query.limit(limit);
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error('Error getting user earnings:', error);
+      return [];
+    }
+  }
 
-    return {
-      totalBtc: Number(result[0].totalBtc) || 0,
-      totalUsd: Number(result[0].totalUsd) || 0,
-    };
+  async getUserTotalEarnings(userId: string): Promise<{ totalBtc: number; totalUsd: number }> {
+    try {
+      const result = await MiningEarning.aggregate([
+        { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+        {
+          $group: {
+            _id: null,
+            totalBtc: { $sum: '$amount' },
+            totalUsd: { $sum: '$usdValue' }
+          }
+        }
+      ]);
+
+      return {
+        totalBtc: result[0]?.totalBtc || 0,
+        totalUsd: result[0]?.totalUsd || 0
+      };
+    } catch (error) {
+      console.error('Error getting user total earnings:', error);
+      return { totalBtc: 0, totalUsd: 0 };
+    }
   }
 
   // Withdrawals
-  async createWithdrawal(withdrawalData: CreateWithdrawalData & { userId: number }): Promise<Withdrawal> {
-    const insertData = {
-      ...withdrawalData,
-      amount: withdrawalData.amount.toString()
-    };
-    const result = await db.insert(withdrawals).values(insertData as any).returning();
-    return result[0];
+  async createWithdrawal(withdrawalData: CreateWithdrawalData & { userId: string }): Promise<WithdrawalType> {
+    try {
+      const withdrawal = new Withdrawal(withdrawalData);
+      return await withdrawal.save();
+    } catch (error) {
+      console.error('Error creating withdrawal:', error);
+      throw error;
+    }
   }
 
-  async getUserWithdrawals(userId: number): Promise<Withdrawal[]> {
-    return await db.select().from(withdrawals).where(eq(withdrawals.userId, userId)).orderBy(desc(withdrawals.createdAt));
+  async getUserWithdrawals(userId: string): Promise<WithdrawalType[]> {
+    try {
+      return await Withdrawal.find({ userId }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting user withdrawals:', error);
+      return [];
+    }
   }
 
-  async getPendingWithdrawals(): Promise<Withdrawal[]> {
-    return await db.select().from(withdrawals).where(eq(withdrawals.status, 'pending')).orderBy(desc(withdrawals.createdAt));
+  async getPendingWithdrawals(): Promise<WithdrawalType[]> {
+    try {
+      return await Withdrawal.find({ status: 'pending' }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting pending withdrawals:', error);
+      return [];
+    }
   }
 
-  async getAllWithdrawals(): Promise<Withdrawal[]> {
-    return await db.select().from(withdrawals).orderBy(desc(withdrawals.createdAt));
+  async getAllWithdrawals(): Promise<WithdrawalType[]> {
+    try {
+      return await Withdrawal.find().sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting all withdrawals:', error);
+      return [];
+    }
   }
 
-  async updateWithdrawal(id: number, updates: Partial<Withdrawal>): Promise<Withdrawal | null> {
-    const result = await db.update(withdrawals).set({...updates, updatedAt: sql`NOW()`}).where(eq(withdrawals.id, id)).returning();
-    return result[0] || null;
+  async updateWithdrawal(id: string, updates: Partial<WithdrawalType>): Promise<WithdrawalType | null> {
+    try {
+      return await Withdrawal.findByIdAndUpdate(id, updates, { new: true });
+    } catch (error) {
+      console.error('Error updating withdrawal:', error);
+      return null;
+    }
   }
 
   // Crypto prices
-  async upsertCryptoPrice(priceData: NewCryptoPrice): Promise<CryptoPrice> {
-    const result = await db.insert(cryptoPrices).values({
-      ...priceData,
-      updatedAt: sql`NOW()`
-    }).onConflictDoUpdate({
-      target: cryptoPrices.symbol,
-      set: {
-        ...priceData,
-        updatedAt: sql`NOW()`
-      }
-    }).returning();
-    return result[0];
+  async upsertCryptoPrice(priceData: NewCryptoPrice): Promise<CryptoPriceType> {
+    try {
+      return await CryptoPrice.findOneAndUpdate(
+        { symbol: priceData.symbol },
+        priceData,
+        { upsert: true, new: true }
+      );
+    } catch (error) {
+      console.error('Error upserting crypto price:', error);
+      throw error;
+    }
   }
 
-  async getCryptoPrices(): Promise<CryptoPrice[]> {
-    return await db.select().from(cryptoPrices).orderBy(desc(cryptoPrices.updatedAt));
+  async getCryptoPrices(): Promise<CryptoPriceType[]> {
+    try {
+      return await CryptoPrice.find().sort({ updatedAt: -1 });
+    } catch (error) {
+      console.error('Error getting crypto prices:', error);
+      return [];
+    }
   }
 
-  async getCryptoPrice(symbol: string): Promise<CryptoPrice | null> {
-    const result = await db.select().from(cryptoPrices).where(eq(cryptoPrices.symbol, symbol)).limit(1);
-    return result[0] || null;
+  async getCryptoPrice(symbol: string): Promise<CryptoPriceType | null> {
+    try {
+      return await CryptoPrice.findOne({ symbol });
+    } catch (error) {
+      console.error('Error getting crypto price:', error);
+      return null;
+    }
   }
 
   // Announcements
-  async createAnnouncement(announcementData: CreateAnnouncementData & { createdBy: number }): Promise<Announcement> {
-    const result = await db.insert(announcements).values(announcementData).returning();
-    return result[0];
+  async createAnnouncement(announcementData: CreateAnnouncementData & { createdBy: string }): Promise<AnnouncementType> {
+    try {
+      const announcement = new Announcement(announcementData);
+      return await announcement.save();
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+      throw error;
+    }
   }
 
-  async getActiveAnnouncements(): Promise<Announcement[]> {
-    return await db.select().from(announcements).where(eq(announcements.isActive, true)).orderBy(desc(announcements.createdAt));
+  async getActiveAnnouncements(): Promise<AnnouncementType[]> {
+    try {
+      return await Announcement.find({ isActive: true }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting active announcements:', error);
+      return [];
+    }
   }
 
-  async getAllAnnouncements(): Promise<Announcement[]> {
-    return await db.select().from(announcements).orderBy(desc(announcements.createdAt));
+  async getAllAnnouncements(): Promise<AnnouncementType[]> {
+    try {
+      return await Announcement.find().sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting all announcements:', error);
+      return [];
+    }
   }
 
-  async updateAnnouncement(id: number, updates: Partial<Announcement>): Promise<Announcement | null> {
-    const result = await db.update(announcements).set({...updates, updatedAt: sql`NOW()`}).where(eq(announcements.id, id)).returning();
-    return result[0] || null;
+  async updateAnnouncement(id: string, updates: Partial<AnnouncementType>): Promise<AnnouncementType | null> {
+    try {
+      return await Announcement.findByIdAndUpdate(id, updates, { new: true });
+    } catch (error) {
+      console.error('Error updating announcement:', error);
+      return null;
+    }
   }
 
-  async deleteAnnouncement(id: number): Promise<boolean> {
-    const result = await db.delete(announcements).where(eq(announcements.id, id)).returning();
-    return result.length > 0;
+  async deleteAnnouncement(id: string): Promise<boolean> {
+    try {
+      const result = await Announcement.findByIdAndDelete(id);
+      return !!result;
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      return false;
+    }
   }
 
   // Support Tickets implementation
-  async createSupportTicket(ticketData: CreateSupportTicketData & { userId: number }): Promise<SupportTicket> {
-    const result = await db.insert(supportTickets).values(ticketData as NewSupportTicket).returning();
-    return result[0];
-  }
-
-  async getSupportTicket(id: number): Promise<SupportTicket | null> {
-    const result = await db.select().from(supportTickets).where(eq(supportTickets.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async getUserSupportTickets(userId: number): Promise<SupportTicket[]> {
-    return await db.select().from(supportTickets).where(eq(supportTickets.userId, userId)).orderBy(desc(supportTickets.createdAt));
-  }
-
-  async getAllSupportTickets(): Promise<SupportTicket[]> {
-    return await db.select().from(supportTickets).orderBy(desc(supportTickets.createdAt));
-  }
-
-  async updateSupportTicket(id: number, updates: UpdateTicketData): Promise<SupportTicket | null> {
-    const updateData: any = { ...updates, updatedAt: new Date() };
-    
-    if (updates.status === 'resolved') {
-      updateData.resolvedAt = new Date();
+  async createSupportTicket(ticketData: CreateSupportTicketData & { userId: string }): Promise<SupportTicketType> {
+    try {
+      const ticket = new SupportTicket(ticketData);
+      return await ticket.save();
+    } catch (error) {
+      console.error('Error creating support ticket:', error);
+      throw error;
     }
-    
-    const result = await db.update(supportTickets)
-      .set(updateData)
-      .where(eq(supportTickets.id, id))
-      .returning();
-    
-    return result[0] || null;
+  }
+
+  async getSupportTicket(id: string): Promise<SupportTicketType | null> {
+    try {
+      return await SupportTicket.findById(id);
+    } catch (error) {
+      console.error('Error getting support ticket:', error);
+      return null;
+    }
+  }
+
+  async getUserSupportTickets(userId: string): Promise<SupportTicketType[]> {
+    try {
+      return await SupportTicket.find({ userId }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting user support tickets:', error);
+      return [];
+    }
+  }
+
+  async getAllSupportTickets(): Promise<SupportTicketType[]> {
+    try {
+      return await SupportTicket.find().sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting all support tickets:', error);
+      return [];
+    }
+  }
+
+  async updateSupportTicket(id: string, updates: UpdateTicketData): Promise<SupportTicketType | null> {
+    try {
+      const updateData: any = { ...updates };
+      
+      if (updates.status === 'resolved') {
+        updateData.resolvedAt = new Date();
+      }
+      
+      if (updates.assignedTo) {
+        updateData.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
+        updateData.assignedAt = new Date();
+      }
+      
+      return await SupportTicket.findByIdAndUpdate(id, updateData, { new: true });
+    } catch (error) {
+      console.error('Error updating support ticket:', error);
+      return null;
+    }
   }
 
   // Support Ticket Messages implementation
-  async createTicketMessage(messageData: CreateTicketMessageData & { userId: number; isFromAdmin: boolean }): Promise<SupportTicketMessage> {
-    const result = await db.insert(supportTicketMessages).values(messageData as NewSupportTicketMessage).returning();
-    return result[0];
+  async createTicketMessage(messageData: CreateTicketMessageData & { userId: string; isFromAdmin: boolean }): Promise<SupportTicketMessageType> {
+    try {
+      const message = new SupportTicketMessage(messageData);
+      return await message.save();
+    } catch (error) {
+      console.error('Error creating ticket message:', error);
+      throw error;
+    }
   }
 
-  async getTicketMessages(ticketId: number): Promise<SupportTicketMessage[]> {
-    return await db.select().from(supportTicketMessages).where(eq(supportTicketMessages.ticketId, ticketId)).orderBy(supportTicketMessages.createdAt);
+  async getTicketMessages(ticketId: string): Promise<SupportTicketMessageType[]> {
+    try {
+      return await SupportTicketMessage.find({ ticketId }).sort({ createdAt: 1 });
+    } catch (error) {
+      console.error('Error getting ticket messages:', error);
+      return [];
+    }
   }
 }
 
-export const storage = new PostgresStorage();
+export const storage = new MongoStorage();
