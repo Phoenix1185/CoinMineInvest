@@ -8,6 +8,8 @@ import pgSession from 'connect-pg-simple';
 
 // Session configuration
 export function setupSession(app: Express) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   app.use(session({
     secret: process.env.SESSION_SECRET!,
     resave: false,
@@ -18,17 +20,29 @@ export function setupSession(app: Express) {
       createTableIfMissing: true
     }),
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Cross-origin cookies in production (Vercel→Koyeb)
+      sameSite: isProduction ? 'none' : 'lax', // Cross-origin cookies in production
+      domain: isProduction ? undefined : undefined // Let browser handle domain automatically
     }
   }));
+  
+  // Debug session cookie configuration
+  if (isProduction) {
+    console.log('🍪 Session cookies configured for cross-origin (production):');
+    console.log('  - secure: true');
+    console.log('  - sameSite: none');
+    console.log('  - httpOnly: true');
+  }
 }
 
 // Authentication middleware
 export async function isAuthenticated(req: any, res: Response, next: NextFunction) {
+  console.log('🔒 Auth check for:', req.path, 'Session ID:', req.sessionID, 'UserId:', req.session?.userId, 'Origin:', req.headers.origin);
+  
   if (!req.session?.userId) {
+    console.log('❌ No session or userId found for:', req.path);
     return res.status(401).json({ message: 'Not authenticated' });
   }
 
@@ -158,6 +172,7 @@ export function setupAuth(app: Express) {
   // Login with email/password
   app.post('/api/auth/login', async (req, res) => {
     try {
+      console.log('🔐 Login attempt from:', req.headers.origin);
       const loginData = loginSchema.parse(req.body);
       
       // Find user
@@ -184,6 +199,7 @@ export function setupAuth(app: Express) {
 
       // Create session
       (req as any).session.userId = user.id.toString();
+      console.log('✅ Session created for user:', user.id, 'Session ID:', (req as any).sessionID);
 
       // Don't send password
       const { password, ...userWithoutPassword } = user;
