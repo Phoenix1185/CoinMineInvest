@@ -256,13 +256,14 @@ Update your backend deployment with:
 ### Common Issues
 
 #### CORS Errors
-Add CORS configuration in your backend:
-```typescript
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true
-}));
-```
+The backend already includes comprehensive CORS configuration for cross-origin requests. Ensure these environment variables are set:
+- `FRONTEND_URL`: Your Vercel app URL for explicit CORS allowance
+- The CORS configuration automatically allows Vercel deployments (.vercel.app domains)
+
+If you still encounter CORS issues, verify:
+1. `FRONTEND_URL` matches your exact Vercel domain
+2. Your backend deployment includes the CORS configuration
+3. Session cookies are configured with `sameSite: 'none'` in production
 
 #### Database Connection Issues
 - Verify `DATABASE_URL` is correctly set
@@ -314,6 +315,7 @@ SESSION_SECRET=your-super-secret-session-key-here
 GOOGLE_CLIENT_ID=your-google-oauth-client-id
 GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
 GOOGLE_REDIRECT_URI=https://your-backend-url.koyeb.app/api/auth/google/callback
+FRONTEND_URL=https://your-frontend-url.vercel.app
 ```
 
 ### Frontend (Vercel)

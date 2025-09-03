@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -20,6 +21,40 @@ if (missingVars.length > 0) {
 }
 
 console.log('✓ Environment variables validated');
+
+// CORS configuration for production deployment
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Allow Vercel deployments (your frontend)
+    if (origin.includes('vercel.app') || origin.includes('vercel.live')) {
+      return callback(null, true);
+    }
+    
+    // Allow Replit domains for development
+    if (origin.includes('replit.dev') || origin.includes('replit.co')) {
+      return callback(null, true);
+    }
+    
+    // If FRONTEND_URL is set, allow it
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+      return callback(null, true);
+    }
+    
+    // Default: allow the request (you can make this more restrictive)
+    callback(null, true);
+  },
+  credentials: true, // Allow cookies and authorization headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Accept', 'Origin']
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
