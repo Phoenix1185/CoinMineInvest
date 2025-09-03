@@ -12,6 +12,7 @@ export function setupSession(app: Express) {
   const mongoUri = process.env.DATABASE_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/cryptomine_pro';
   
   app.use(session({
+    name: 'cryptomine.sid', // Explicit session cookie name
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
@@ -307,7 +308,7 @@ export function setupAuth(app: Express) {
         console.error('Logout error:', err);
         return res.status(500).json({ message: 'Logout failed' });
       }
-      res.clearCookie('connect.sid');
+      res.clearCookie('cryptomine.sid');
       res.json({ message: 'Logged out successfully' });
     });
   });

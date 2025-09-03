@@ -1,13 +1,14 @@
 # CryptoMine Pro - Deployment Guide
 
-This guide provides step-by-step instructions for deploying CryptoMine Pro to production with frontend hosting on Vercel and backend hosting on Render or Koyeb.
+This guide provides step-by-step instructions for deploying CryptoMine Pro to production with frontend hosting on Vercel and backend hosting on Koyeb.
 
 ## Overview
 
 - **Frontend**: React app deployed to Vercel
-- **Backend**: Node.js/Express API deployed to Render or Koyeb  
-- **Database**: Neon PostgreSQL (serverless)
-- **Authentication**: Replit OAuth integration
+- **Backend**: Node.js/Express API deployed to Koyeb  
+- **Database**: MongoDB Atlas (cloud database)
+- **Session Storage**: MongoDB with cross-origin cookie configuration
+- **Authentication**: Session-based auth with secure cross-domain cookies
 
 ## Prerequisites
 
@@ -21,34 +22,30 @@ Before deploying, ensure you have:
   - `package.json` - Build scripts
 - Accounts created on:
   - [Vercel](https://vercel.com) (for frontend)
-  - [Render](https://render.com) or [Koyeb](https://koyeb.com) (for backend)
-  - [Neon](https://neon.tech) (for database)
+  - [Koyeb](https://koyeb.com) (for backend)
+  - [MongoDB Atlas](https://www.mongodb.com/atlas) (for database)
 
-## Part 1: Database Setup (Neon PostgreSQL)
+## Part 1: Database Setup (MongoDB Atlas)
 
-### Step 1: Create Neon Database
-1. Go to [Neon.tech](https://neon.tech) and sign up/login
-2. Click "Create Project"
-3. Choose a name like "cryptomine-pro"
+### Step 1: Create MongoDB Atlas Database
+1. Go to [MongoDB Atlas](https://www.mongodb.com/atlas) and sign up/login
+2. Click "Create" to create a new cluster
+3. Choose "M0 Sandbox" (free tier) for development or appropriate tier for production
 4. Select a region close to your users
-5. Copy the connection string (DATABASE_URL)
+5. Create a database user with username/password
+6. Add your IP address to the whitelist (or 0.0.0.0/0 for all IPs temporarily)
+7. Get your connection string:
+   - Click "Connect" > "Connect your application"
+   - Copy the MongoDB connection string
+   - Replace `<password>` with your database user password
 
-### Step 2: Setup Database Schema
-1. In your local project, create a `.env` file using the provided template:
-```bash
-cp .env.example .env
-```
+### Step 2: Environment Variables
+You'll need these environment variables for both local development and production:
 
-2. Edit `.env` and add your Neon database URL:
 ```bash
-DATABASE_URL="postgresql://username:password@host/dbname?sslmode=require"
-SESSION_SECRET="your-secure-random-string"
-```
-
-3. Install dependencies and push schema:
-```bash
-npm install
-npm run db:push
+DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/cryptomine_pro?retryWrites=true&w=majority"
+SESSION_SECRET="your-very-secure-random-string-for-sessions"
+NODE_ENV="production"
 ```
 
 > **Note**: Check `.env.example` for a complete list of all required environment variables.
@@ -148,7 +145,7 @@ koyeb service create \
 
 3. Set environment variables:
 ```bash
-koyeb secret create DATABASE_URL --value "your-neon-connection-string"
+koyeb secret create DATABASE_URL --value "your-mongodb-connection-string"
 koyeb secret create SESSION_SECRET --value "your-secure-session-secret"
 koyeb secret create GOOGLE_CLIENT_ID --value "your-google-client-id"
 koyeb secret create GOOGLE_CLIENT_SECRET --value "your-google-client-secret"
@@ -185,7 +182,7 @@ The project already includes all necessary deployment files:
         },
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "*"
+          "value": "https://cryptomine-pro.vercel.app"
         },
         {
           "key": "Access-Control-Allow-Methods",
@@ -204,6 +201,8 @@ The project already includes all necessary deployment files:
 2. **Update the backend URL** in `vercel.json` to match your actual Koyeb deployment:
    - Replace `https://your-backend-url.koyeb.app` with your actual backend URL
    - For example: `https://running-kimberli-suhailtechlnf-4b28b6a4.koyeb.app`
+   
+3. **Critical CORS Fix**: Ensure `Access-Control-Allow-Origin` is set to your specific Vercel domain, NOT "*" when using credentials.
 
 ### Step 2: Deploy to Vercel
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)

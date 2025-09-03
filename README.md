@@ -22,8 +22,8 @@ A comprehensive cryptocurrency mining platform that enables users to purchase mi
 
 ### Technical Features
 - **Real-time Updates**: Live balance and earnings updates
-- **Secure Authentication**: Replit OAuth integration
-- **Database Management**: PostgreSQL with Drizzle ORM
+- **Secure Authentication**: Session-based authentication with secure cross-domain cookies
+- **Database Management**: MongoDB with Mongoose ODM
 - **Responsive Design**: Modern UI with dark theme
 - **Type Safety**: Full TypeScript implementation
 - **User Bind ID System**: Custom user identifiers for easy tracking
@@ -41,27 +41,23 @@ A comprehensive cryptocurrency mining platform that enables users to purchase mi
 ### Backend
 - **Node.js** with Express.js
 - **TypeScript** with ES modules
-- **Drizzle ORM** for database operations
-- **PostgreSQL** database (Neon for production)
-- **Replit OAuth** for authentication
+- **Mongoose ODM** for database operations
+- **MongoDB** database (MongoDB Atlas for production)
+- **Session-based authentication** with secure cross-domain cookies
 
 ## 📦 Installation & Setup
 
 ### Prerequisites
 - Node.js 18+ 
-- PostgreSQL database (or Neon for cloud)
-- Replit account (for OAuth)
+- MongoDB database (or MongoDB Atlas for cloud)
+- Environment for session secrets
 
 ### Environment Variables
 Create a `.env` file with the following variables:
 
 ```bash
 # Database
-DATABASE_URL=postgresql://username:password@localhost:5432/cryptomine_pro
-
-# Authentication (Replit OAuth)
-REPLIT_CLIENT_ID=your_replit_client_id
-REPLIT_CLIENT_SECRET=your_replit_client_secret
+DATABASE_URL=mongodb://localhost:27017/cryptomine_pro
 
 # Session
 SESSION_SECRET=your_session_secret_key
