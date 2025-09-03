@@ -21,7 +21,7 @@ export function setupSession(app: Express) {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: 'lax' // Use lax for same-origin requests (frontend and backend on same domain)
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Cross-origin cookies in production (Vercel→Koyeb)
     }
   }));
 }
