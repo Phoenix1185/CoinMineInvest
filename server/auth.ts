@@ -4,20 +4,21 @@ import { OAuth2Client } from 'google-auth-library';
 import { loginSchema, registerSchema, type LoginData, type RegisterData } from '@shared/schema';
 import type { Express, Request, Response, NextFunction } from 'express';
 import session from 'express-session';
-import pgSession from 'connect-pg-simple';
+import MongoStore from 'connect-mongo';
 
 // Session configuration
 export function setupSession(app: Express) {
   const isProduction = process.env.NODE_ENV === 'production';
+  const mongoUri = process.env.DATABASE_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/cryptomine_pro';
   
   app.use(session({
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
-    store: new (pgSession(session))({
-      conString: process.env.DATABASE_URL!,
-      tableName: 'user_sessions',
-      createTableIfMissing: true
+    store: MongoStore.create({
+      mongoUrl: mongoUri,
+      collectionName: 'user_sessions',
+      ttl: 7 * 24 * 60 * 60 // 7 days in seconds
     }),
     cookie: {
       secure: isProduction,

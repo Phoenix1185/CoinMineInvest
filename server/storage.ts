@@ -80,6 +80,7 @@ export interface IStorage {
   
   // Withdrawals
   createWithdrawal(withdrawal: CreateWithdrawalData & { userId: string }): Promise<WithdrawalType>;
+  getWithdrawal(id: string): Promise<WithdrawalType | null>;
   getUserWithdrawals(userId: string): Promise<WithdrawalType[]>;
   getPendingWithdrawals(): Promise<WithdrawalType[]>;
   getAllWithdrawals(): Promise<WithdrawalType[]>;
@@ -430,6 +431,15 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error creating withdrawal:', error);
       throw error;
+    }
+  }
+
+  async getWithdrawal(id: string): Promise<WithdrawalType | null> {
+    try {
+      return await Withdrawal.findById(id);
+    } catch (error) {
+      console.error('Error getting withdrawal:', error);
+      return null;
     }
   }
 

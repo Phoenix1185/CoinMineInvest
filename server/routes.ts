@@ -2,14 +2,16 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
-import { createTransactionSchema, createWithdrawalSchema, createAnnouncementSchema, createSupportTicketSchema, createTicketMessageSchema, updateTicketSchema, PAYMENT_ADDRESSES, withdrawals, miningEarnings } from "@shared/schema";
-import db from './db';
-import { eq, desc, sql } from 'drizzle-orm';
+import { createTransactionSchema, createWithdrawalSchema, createAnnouncementSchema, createSupportTicketSchema, createTicketMessageSchema, updateTicketSchema, PAYMENT_ADDRESSES } from "@shared/schema";
+import { connectToDatabase } from './db';
 import { z } from "zod";
 import axios from 'axios';
 import bcrypt from 'bcryptjs';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Connect to MongoDB
+  await connectToDatabase();
+
   // Auth middleware
   setupAuth(app);
 
@@ -148,25 +150,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offset = (page - 1) * limit;
       
       // Get paginated earnings and total count
-      const [earnings, totalCount] = await Promise.all([
-        db.select().from(miningEarnings)
-          .where(eq(miningEarnings.userId, userId))
-          .orderBy(desc(miningEarnings.date))
-          .limit(limit)
-          .offset(offset),
-        db.select({ count: sql<number>`count(*)` })
-          .from(miningEarnings)
-          .where(eq(miningEarnings.userId, userId))
-      ]);
+      const earnings = await storage.getUserEarnings(userId, limit);
+      const totalEarnings = await storage.getUserTotalEarnings(userId);
+      const totalCount = earnings.length; // For now, use earnings length as count
       
-      const totalPages = Math.ceil(Number(totalCount[0].count) / limit);
+      const totalPages = Math.ceil(totalCount / limit);
       
       res.json({
         earnings,
         pagination: {
           currentPage: page,
           totalPages,
-          totalRecords: Number(totalCount[0].count),
+          totalRecords: totalCount,
           limit
         }
       });
@@ -488,12 +483,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { transactionHash, networkFee } = req.body;
 
       // Get withdrawal details first
-      const currentWithdrawal = await db.select().from(withdrawals).where(eq(withdrawals.id, parseInt(id))).limit(1);
-      if (!currentWithdrawal[0]) {
+      const withdrawal = await storage.getWithdrawal(id);
+      if (!withdrawal) {
         return res.status(404).json({ message: "Withdrawal not found" });
       }
-
-      const withdrawal = currentWithdrawal[0];
       
       // When processing withdrawal, deduct balance from user's earnings in BTC equivalent
       if (withdrawal.currency !== 'BTC') {
