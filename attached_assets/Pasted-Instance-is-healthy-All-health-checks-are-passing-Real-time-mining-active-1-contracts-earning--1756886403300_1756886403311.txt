@@ -1,0 +1,100 @@
+Instance is healthy. All health checks are passing.
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+7:48:01 AM [express] GET /api/auth/user 401 in 4ms :: {"message":"Not authenticated"}
+7:48:08 AM [express] POST /api/auth/login 200 in 640ms :: {"user":{"id":1,"email":"fredokcee1@gmail.…
+7:48:08 AM [express] GET /api/support-tickets 401 in 1ms :: {"message":"Not authenticated"}
+7:48:08 AM [express] GET /api/announcements 304 in 8ms :: []
+7:48:08 AM [express] GET /api/earnings 401 in 1ms :: {"message":"Not authenticated"}
+7:48:08 AM [express] GET /api/withdrawals 401 in 1ms :: {"message":"Not authenticated"}
+7:48:08 AM [express] GET /api/mining-contracts-with-plans 401 in 1ms :: {"message":"Not authenticate…
+7:48:08 AM [express] GET /api/transactions 401 in 0ms :: {"message":"Not authenticated"}
+7:48:08 AM [express] GET /api/crypto-prices 200 in 10ms :: [{"id":9,"symbol":"TRX","name":"TRON","pr…
+7:48:09 AM [express] GET /api/mining-plans 304 in 194ms :: [{"id":1,"name":"Starter Plan","price":"1…
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+7:48:21 AM [express] GET /api/earnings/all 401 in 1ms :: {"message":"Not authenticated"}
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+7:48:38 AM [express] POST /api/transactions 401 in 1ms :: {"message":"Not authenticated"}
+7:48:39 AM [express] GET /api/withdrawals 401 in 1ms :: {"message":"Not authenticated"}
+7:48:39 AM [express] GET /api/transactions 401 in 1ms :: {"message":"Not authenticated"}
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+7:50:49 AM [express] GET /api/auth/user 401 in 1ms :: {"message":"Not authenticated"}
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+7:51:13 AM [express] POST /api/auth/login 200 in 3970ms :: {"user":{"id":1,"email":"fredokcee1@gmail…
+7:51:13 AM [express] GET /api/transactions 401 in 1ms :: {"message":"Not authenticated"}
+7:51:13 AM [express] GET /api/withdrawals 401 in 0ms :: {"message":"Not authenticated"}
+7:51:13 AM [express] GET /api/mining-plans 200 in 7ms :: [{"id":1,"name":"Starter Plan","price":"10.…
+7:51:13 AM [express] GET /api/support-tickets 401 in 1ms :: {"message":"Not authenticated"}
+7:51:13 AM [express] GET /api/crypto-prices 200 in 29ms :: [{"id":9,"symbol":"TRX","name":"TRON","pr…
+7:51:13 AM [express] GET /api/mining-contracts-with-plans 401 in 1ms :: {"message":"Not authenticate…
+7:51:13 AM [express] GET /api/earnings 401 in 0ms :: {"message":"Not authenticated"}
+7:51:13 AM [express] GET /api/announcements 200 in 7ms :: []
+⛏️ Real-time mining active: 1 contracts earning per second
+7:51:22 AM [express] GET /api/auth/user 401 in 1ms :: {"message":"Not authenticated"}
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+✓ Crypto prices updated successfully
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second
+⛏️ Real-time mining active: 1 contracts earning per second

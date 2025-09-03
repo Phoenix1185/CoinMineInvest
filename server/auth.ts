@@ -21,7 +21,7 @@ export function setupSession(app: Express) {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Allow cross-origin cookies in production
+      sameSite: 'lax' // Use lax for same-origin requests (frontend and backend on same domain)
     }
   }));
 }
@@ -144,7 +144,7 @@ export function setupAuth(app: Express) {
 
       // Don't send password
       const { password, ...userWithoutPassword } = user;
-      res.status(201).json({ user: userWithoutPassword });
+      res.status(201).json(userWithoutPassword);
     } catch (error: any) {
       console.error('Registration error:', error);
       if (error.name === 'ZodError') {
@@ -187,7 +187,7 @@ export function setupAuth(app: Express) {
 
       // Don't send password
       const { password, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
+      res.json(userWithoutPassword);
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.name === 'ZodError') {
