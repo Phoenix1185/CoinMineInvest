@@ -742,16 +742,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public support contact (for logged out users)
   app.post('/api/contact-support', async (req, res) => {
     try {
-      const { name, email, subject, message } = req.body;
+      const { name, email, subject, message, category = 'General' } = req.body;
 
       if (!name || !email || !subject || !message) {
         return res.status(400).json({ message: "All fields are required" });
       }
 
-      // For now, just return success. In a real system, you'd send an email or store in a contact form table
-      console.log('Public support contact received:', { name, email, subject, message });
+      // Create a support ticket from the public contact form
+      // First, check if user exists by email
+      let user = await storage.getUserByEmail(email);
       
-      res.json({ message: "Support request submitted successfully. We will get back to you soon." });
+      if (!user) {
+        // Create a temporary user account for public support requests
+        const customUserId = await storage.generateCustomUserId();
+        user = await storage.createUser({
+          email,
+          firstName: name.split(' ')[0] || name,
+          lastName: name.split(' ').slice(1).join(' ') || '',
+          customUserId,
+          isEmailVerified: false,
+          isAdmin: false,
+        });
+      }
+
+      // Create support ticket that will appear in admin dashboard
+      const ticket = await storage.createSupportTicket({
+        subject: `[Public Contact] ${subject}`,
+        description: message,
+        category,
+        priority: 'medium',
+        userId: user.id,
+      });
+
+      console.log('Public support ticket created:', { 
+        ticketId: ticket.id, 
+        name, 
+        email, 
+        subject 
+      });
+      
+      res.json({ 
+        message: "Support request submitted successfully. We will get back to you soon.",
+        ticketId: ticket.id 
+      });
     } catch (error) {
       console.error("Error submitting support request:", error);
       res.status(500).json({ message: "Failed to submit support request" });
