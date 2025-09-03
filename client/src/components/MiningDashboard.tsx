@@ -252,7 +252,7 @@ export default function MiningDashboard() {
           <CardContent className="relative z-10">
             <div className="relative">
               {/* Real-time balance ticker */}
-              <div className="text-3xl font-bold mb-2" data-testid="text-total-btc">
+              <div className="text-3xl font-bold mb-2" data-testid="text-total-btc" data-tutorial-target="earnings-section">
                 <RealTimeBalanceTicker
                   currentBalance={totals.totalBtc}
                   currency=""

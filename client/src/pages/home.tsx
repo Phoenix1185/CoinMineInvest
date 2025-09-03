@@ -8,7 +8,9 @@ import MiningPlans from "@/components/MiningPlans";
 import MiningDashboard from "@/components/MiningDashboard";
 import WithdrawalPage from "@/components/WithdrawalPage";
 import SupportTicket from "@/components/SupportTicket";
-import { Coins, LogOut, User, Settings, BarChart3 } from "lucide-react";
+import OnboardingTutorial from "@/components/OnboardingTutorial";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import { Coins, LogOut, User, Settings, BarChart3, HelpCircle } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Footer from "@/components/Footer";
 
@@ -16,6 +18,7 @@ export default function Home() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { onboardingState, completeOnboarding, hideOnboarding, showOnboarding } = useOnboarding();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -30,6 +33,17 @@ export default function Home() {
       return;
     }
   }, [user, isLoading, toast, setLocation]);
+
+  // Show onboarding for new users
+  useEffect(() => {
+    if (user && !onboardingState.isCompleted) {
+      // Small delay to let the page load
+      const timer = setTimeout(() => {
+        showOnboarding();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, onboardingState.isCompleted, showOnboarding]);
 
   const { logoutMutation } = useAuth();
 
@@ -86,6 +100,15 @@ export default function Home() {
               </div>
               <Button 
                 variant="outline"
+                onClick={showOnboarding}
+                className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+                data-testid="button-tutorial"
+              >
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Tutorial
+              </Button>
+              <Button 
+                variant="outline"
                 onClick={handleLogout}
                 className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                 data-testid="button-logout"
@@ -99,7 +122,7 @@ export default function Home() {
       </nav>
 
       {/* Mining Dashboard Section */}
-      <section id="dashboard" className="py-16 bg-cmc-dark">
+      <section id="dashboard" className="py-16 bg-cmc-dark" data-tutorial-target="mining-dashboard">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4" data-testid="text-dashboard-title">Mining Dashboard</h2>
@@ -121,7 +144,7 @@ export default function Home() {
       </section>
 
       {/* Mining Plans Section */}
-      <section id="plans" className="py-16 bg-gray-900">
+      <section id="plans" className="py-16 bg-gray-900" data-tutorial-target="mining-plans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4" data-testid="text-plans-title">Upgrade Your Mining Plan</h2>
@@ -132,7 +155,7 @@ export default function Home() {
       </section>
 
       {/* Withdrawals Section */}
-      <section id="withdrawals" className="py-16 bg-cmc-dark">
+      <section id="withdrawals" className="py-16 bg-cmc-dark" data-tutorial-target="withdrawal-button">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4" data-testid="text-withdrawals-title">Withdraw Earnings</h2>
@@ -143,12 +166,19 @@ export default function Home() {
       </section>
 
       {/* Support Section */}
-      <section id="support" className="py-16 bg-gray-900">
+      <section id="support" className="py-16 bg-gray-900" data-tutorial-target="support-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SupportTicket />
         </div>
       </section>
       <Footer />
+      
+      {/* Onboarding Tutorial */}
+      <OnboardingTutorial
+        isOpen={onboardingState.shouldShow}
+        onClose={hideOnboarding}
+        onComplete={completeOnboarding}
+      />
     </div>
   );
 }
