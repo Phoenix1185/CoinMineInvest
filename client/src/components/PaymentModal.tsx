@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,42 +26,61 @@ interface PaymentModalProps {
   onClose: () => void;
 }
 
+// Base crypto options with static data (addresses and logos)
 const CRYPTO_OPTIONS = [
   {
     symbol: "BNB",
-    name: "Binance Coin",
+    name: "Binance Coin", 
     logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png",
     address: "0x09f616C4118870CcB2BE1aCE1EAc090bF443833B",
-    rate: 877.23, // Price per BNB
   },
   {
     symbol: "BTC", 
     name: "Bitcoin",
     logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png",
     address: "bc1qfxl02mlrwfnnamr6qqhcgcutyth87du67u0nm0",
-    rate: 112570.41, // Price per BTC
   },
   {
     symbol: "USDT",
-    name: "Tether ERC20",
+    name: "Tether", 
     logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/825.png", 
     address: "TDsBManQwvT698thSMKmhjYqKTupVxWFwK",
-    rate: 0.9995, // Price per USDT
   },
   {
     symbol: "SOL",
     name: "Solana",
     logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png",
     address: "9ENQmbQFA1mKWYZWaL1qpH1ACLioLz55eANsigHGckXt",
-    rate: 205.71, // Price per SOL
   },
 ];
+
+// Interface for crypto price data
+interface CryptoPrice {
+  id: number;
+  symbol: string;
+  name: string;
+  price: string;
+  change1h: string;
+  change24h: string;
+  change7d: string;
+  marketCap: string;
+  volume24h: string;
+  circulatingSupply: string;
+  logoUrl: string;
+  updatedAt: string;
+}
 
 export default function PaymentModal({ plan, isOpen, onClose }: PaymentModalProps) {
   const [selectedCrypto, setSelectedCrypto] = useState<typeof CRYPTO_OPTIONS[0] | null>(null);
   const [transactionHash, setTransactionHash] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch real-time crypto prices
+  const { data: cryptoPrices = [] } = useQuery<CryptoPrice[]>({
+    queryKey: ["/api/crypto-prices"],
+    refetchInterval: 60000, // Refetch every 60 seconds
+  });
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -97,11 +116,31 @@ export default function PaymentModal({ plan, isOpen, onClose }: PaymentModalProp
     },
   });
 
+  // Get real-time price for a crypto symbol
+  const getRealTimePrice = (symbol: string): number => {
+    const cryptoPrice = cryptoPrices.find(p => p.symbol === symbol);
+    return cryptoPrice ? parseFloat(cryptoPrice.price) : 0;
+  };
+
   const calculateCryptoAmount = (crypto: typeof CRYPTO_OPTIONS[0]) => {
     const usdAmount = parseFloat(plan.price);
-    const cryptoAmount = usdAmount / crypto.rate;
+    const realTimeRate = getRealTimePrice(crypto.symbol);
+    
+    // Fallback to 0 if no real-time price available (will show error)
+    if (realTimeRate === 0) {
+      return "0.00000000";
+    }
+    
+    const cryptoAmount = usdAmount / realTimeRate;
     return cryptoAmount.toFixed(crypto.symbol === "BTC" ? 8 : crypto.symbol === "USDT" ? 2 : 4);
   };
+
+  // Create enhanced crypto options with real-time prices
+  const enhancedCryptoOptions = CRYPTO_OPTIONS.map(crypto => ({
+    ...crypto,
+    rate: getRealTimePrice(crypto.symbol),
+    isAvailable: getRealTimePrice(crypto.symbol) > 0
+  }));
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -145,14 +184,16 @@ export default function PaymentModal({ plan, isOpen, onClose }: PaymentModalProp
           <div>
             <h3 className="text-lg font-semibold mb-4 text-white" data-testid="text-payment-method">Select Payment Method</h3>
             <div className="space-y-3">
-              {CRYPTO_OPTIONS.map((crypto) => (
+              {enhancedCryptoOptions.map((crypto) => (
                 <div
                   key={crypto.symbol}
-                  onClick={() => setSelectedCrypto(crypto)}
-                  className={`bg-cmc-dark p-4 rounded-xl border cursor-pointer transition-colors ${
-                    selectedCrypto?.symbol === crypto.symbol
-                      ? "border-cmc-blue"
-                      : "border-gray-600 hover:border-cmc-blue"
+                  onClick={() => crypto.isAvailable && setSelectedCrypto(crypto)}
+                  className={`bg-cmc-dark p-4 rounded-xl border transition-colors ${
+                    !crypto.isAvailable 
+                      ? "opacity-50 cursor-not-allowed border-gray-700" 
+                      : selectedCrypto?.symbol === crypto.symbol
+                        ? "border-cmc-blue cursor-pointer"
+                        : "border-gray-600 hover:border-cmc-blue cursor-pointer"
                   }`}
                   data-testid={`option-crypto-${crypto.symbol.toLowerCase()}`}
                 >
@@ -165,11 +206,19 @@ export default function PaymentModal({ plan, isOpen, onClose }: PaymentModalProp
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold text-white">
-                        {calculateCryptoAmount(crypto)} {crypto.symbol}
-                      </div>
-                      <div className="text-sm text-cmc-gray">≈ ${plan.price}</div>
-                    </div>
+                      {crypto.isAvailable ? (
+                        <>
+                          <div className="font-semibold text-white">
+                            {calculateCryptoAmount(crypto)} {crypto.symbol}
+                          </div>
+                          <div className="text-sm text-cmc-gray">≈ ${plan.price}</div>
+                          <div className="text-xs text-green-400">
+                            Live: ${crypto.rate.toLocaleString()}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-red-400">Price unavailable</div>
+                      )}</div>
                   </div>
                 </div>
               ))}
