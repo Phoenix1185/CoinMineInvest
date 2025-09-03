@@ -4,9 +4,20 @@
 
 CryptoMine Pro is a comprehensive cryptocurrency mining platform that enables users to purchase mining contracts, track earnings, and manage withdrawals. The application features a modern web interface built with React and TypeScript, backed by a Node.js/Express server with PostgreSQL database integration. The platform supports multiple cryptocurrencies, real-time price tracking, and provides both user and admin dashboards for complete mining operation management.
 
+**Deployment Architecture:** Cross-origin setup with frontend deployed on Vercel and backend on Koyeb, with properly configured session-based authentication for seamless user experience.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes (September 2025)
+
+### Authentication System Fixes
+- **Cross-Origin Session Management:** Fixed session cookie configuration for Vercel→Koyeb deployment setup
+- **Cookie Configuration:** Implemented `sameSite: 'none'` and `secure: true` for production cross-origin authentication
+- **Error Handling:** Improved authentication error detection and user redirects
+- **Login Persistence:** Users now stay logged in after page refresh across domains
+- **Response Format:** Standardized login/register response format for consistent frontend handling
 
 ## System Architecture
 
@@ -35,13 +46,24 @@ Preferred communication style: Simple, everyday language.
 ### Authentication & Authorization
 - **Provider**: Replit OAuth with OpenID Connect (OIDC) for secure authentication
 - **Session Management**: Server-side sessions stored in PostgreSQL with configurable TTL
+- **Cross-Origin Support**: Configured for Vercel frontend → Koyeb backend with proper CORS and cookie settings
 - **Authorization**: Role-based access control with admin privileges for management functions
-- **Security**: HTTP-only cookies, CSRF protection, and secure session configuration
+- **Security**: HTTP-only cookies, CSRF protection, secure session configuration, and cross-origin cookie support
+- **Session Cookies**: Production uses `sameSite: 'none'` and `secure: true` for cross-domain authentication
 
-### External Dependencies
+### External Dependencies & Deployment
 - **Database**: Neon PostgreSQL for serverless database hosting
 - **Authentication**: Replit OAuth service for user authentication
+- **Frontend Hosting**: Vercel for static frontend deployment
+- **Backend Hosting**: Koyeb for Node.js backend API deployment
 - **UI Components**: Radix UI primitives for accessible component foundation
 - **Styling**: Google Fonts (Inter, DM Sans, Fira Code, Geist Mono) for typography
 - **Icons**: Lucide React for consistent iconography
 - **Development**: Replit-specific plugins for development environment integration
+
+### Production Configuration
+- **Environment Variables**: 
+  - Frontend (Vercel): `VITE_API_URL` pointing to Koyeb backend
+  - Backend (Koyeb): `SESSION_SECRET`, `DATABASE_URL`, `NODE_ENV=production`
+- **CORS Setup**: Configured to allow Vercel domains for cross-origin requests
+- **Session Cookies**: Optimized for cross-domain authentication with secure settings
