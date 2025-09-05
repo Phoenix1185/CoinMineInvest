@@ -13,9 +13,23 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-async function throwIfResNotOk(res: Response) {
+async function throwIfResNotOk(res: Response, context?: { url: string; method: string }) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    
+    // Enhanced error logging for failed requests
+    const errorDetails = {
+      status: res.status,
+      statusText: res.statusText,
+      url: context?.url || res.url,
+      method: context?.method || 'GET',
+      headers: Object.fromEntries(res.headers.entries()),
+      timestamp: new Date().toISOString()
+    };
+    
+    console.error('🚨 API Request Failed:', errorDetails);
+    console.error('Response body:', text);
+    
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -26,15 +40,28 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const fullUrl = API_BASE_URL + url;
-  const res = await fetch(fullUrl, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  
+  try {
+    const res = await fetch(fullUrl, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res, { url: fullUrl, method });
+    return res;
+  } catch (error: any) {
+    // Additional logging for network-level failures
+    console.error('🔥 Network request failed:', {
+      url: fullUrl,
+      method,
+      error: error?.message || 'Unknown error',
+      timestamp: new Date().toISOString(),
+      hasData: !!data
+    });
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

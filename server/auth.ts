@@ -41,16 +41,35 @@ export function setupSession(app: Express) {
 
 // Authentication middleware
 export async function isAuthenticated(req: any, res: Response, next: NextFunction) {
-  console.log('🔒 Auth check for:', req.path, 'Session ID:', req.sessionID, 'UserId:', req.session?.userId, 'Origin:', req.headers.origin);
+  const authDetails = {
+    path: req.path,
+    sessionId: req.sessionID,
+    userId: req.session?.userId,
+    origin: req.headers.origin,
+    userAgent: req.headers['user-agent'],
+    ip: req.ip || req.connection.remoteAddress
+  };
   
+  // Only log auth details for non-routine checks or failures
   if (!req.session?.userId) {
-    console.log('❌ No session or userId found for:', req.path);
+    console.log(`❌ Auth failed for ${req.path}:`, {
+      reason: 'No session or userId',
+      sessionId: authDetails.sessionId,
+      origin: authDetails.origin,
+      ip: authDetails.ip
+    });
     return res.status(401).json({ message: 'Not authenticated' });
   }
 
   try {
     const user = await storage.getUser(req.session.userId);
     if (!user) {
+      console.log(`❌ Auth failed for ${req.path}:`, {
+        reason: 'User not found in database',
+        userId: req.session.userId,
+        sessionId: authDetails.sessionId,
+        origin: authDetails.origin
+      });
       req.session.destroy((err: any) => {
         if (err) console.error('Session destroy error:', err);
       });
@@ -59,8 +78,14 @@ export async function isAuthenticated(req: any, res: Response, next: NextFunctio
 
     req.user = user;
     next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
+  } catch (error: any) {
+    console.error(`💥 Auth middleware error for ${req.path}:`, {
+      error: error?.message || 'Unknown error',
+      userId: req.session.userId,
+      sessionId: authDetails.sessionId,
+      origin: authDetails.origin,
+      stack: error?.stack
+    });
     res.status(500).json({ message: 'Authentication error' });
   }
 }

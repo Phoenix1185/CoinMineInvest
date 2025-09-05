@@ -1180,9 +1180,9 @@ async function generateEarningsForAllContracts() {
       }
     }
     
-    // Log every 10 seconds to avoid spam
-    if (Date.now() % 10000 < 1000) {
-      console.log(`⛏️ Real-time mining active: ${activeContracts.length} contracts earning per second`);
+    // Log every minute to reduce clutter (60000ms = 1 minute)
+    if (Date.now() % 60000 < 1000) {
+      console.log(`⛏️ Real-time mining summary: ${activeContracts.length} contracts actively earning`);
     }
   } catch (error) {
     console.error("Error in real-time earnings generation:", error);
